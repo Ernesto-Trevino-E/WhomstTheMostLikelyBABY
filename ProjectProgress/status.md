@@ -4,9 +4,9 @@
 > Update it at the END of every phase (and whenever a blocker or decision appears).
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
-**Last updated:** 2026-11-15
+**Last updated:** 2026-11-16
 **Current phase:** Phase 2 — Firebase layer (NOT STARTED)
-**Next action:** Do the two Firebase manual steps below (RTDB check/create, Anonymous auth), then enter plan mode and plan Phase 2.
+**Next action:** Firebase prerequisites are done (RTDB created, Anonymous auth on). Start a new session, enter plan mode and plan Phase 2.
 
 ---
 
@@ -27,7 +27,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Manual steps for the user (Claude Code cannot do these)
 
-- [ ] Create the Realtime Database in the Firebase console (choose region, locked mode) — needed before Phase 2. **Check first:** the `whomst-web` SDK config already returns a `databaseURL` (`impastababy-67140-default-rtdb`), so a default RTDB may already exist. Confirm in the console whether it exists and whether the other game uses it.
+- [x] Create the Realtime Database in the Firebase console (locked mode) — done by user 2026-11-16. Default instance `https://impastababy-67140-default-rtdb.firebaseio.com`, newly created and empty (root is `null`), so no other app uses it yet. Rules are the locked-mode defaults; still read them before deploying in Phase 2.
 - [x] Enable **Anonymous** sign-in under Authentication — needed before Phase 2 (done by user 2026-11-15)
 - [ ] Choose the Cloudflare deploy method (wrangler CLI vs GitHub auto-deploy) — needed before Phase 7
 - [ ] Add the deployed Cloudflare domain to Firebase Authorized domains — Phase 7
