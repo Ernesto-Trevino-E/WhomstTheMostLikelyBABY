@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+*.local
 .env.production
 .env.development
 !.env.example
@@ -11,6 +12,7 @@ node_modules/
 
 # Build output
 dist/
+dist-ssr/
 build/
 out/
 .next/
@@ -36,5 +38,6 @@ coverage/
 Thumbs.db
 
 # Editor files
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/

@@ -19,6 +19,24 @@
 
 ---
 
+## [2026-11-15] Phase 0 — Scaffold
+**Status:** done
+**Summary:** The app is a Vite 8 + React 19 + TypeScript project with Tailwind v4 and the full `@theme` from the styling brief. It has self-hosted Orbitron, Space Grotesk and JetBrains Mono, and a dark dot-grid background. A placeholder screen shows the wordmark, a room code panel and palette swatches. The Firebase SDK is installed but not initialized yet.
+**Files added/changed:** `package.json`, `vite.config.ts`, `tsconfig*.json`, `.oxlintrc.json`, `index.html`, `public/favicon.svg`, `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/env.d.ts`, `src/{components,screens,lib,hooks,data}/.gitkeep`, `.env.example`, `.gitignore`, `.claude/launch.json`
+**Decisions made:**
+- Registered a new Firebase web app `whomst-web` instead of reusing `impasta-web` (user's choice). Its config is in `.env.local`, which is gitignored.
+- Fonts are self-hosted with fontsource, loading only the brief's weights.
+- Kept create-vite's defaults: oxlint for linting and TypeScript 7.
+**Deviations from context files:** none
+**Deferred / follow-ups:**
+- The static corner sparkles in the global background come with the `Sparkle` component in Phase 1.
+- The SDK config already includes a `databaseURL`. In Phase 2, check whether a default RTDB already exists and who uses it before writing rules.
+**How to verify:**
+- Run `npm install`, then `npm run dev`, and open http://localhost:5173. You should see a dark navy background with a faint dot grid, the Orbitron "WHOMST THE MOST?" wordmark, Space Grotesk body text and the mono "WHMS" code. Check at 375px in DevTools that there's no horizontal scroll.
+- `npm run build` and `npm run lint` should both pass.
+- In `git show --stat HEAD`, `.env.example` should be listed and `.env.local` should not.
+**Commit:** Phase 0: Scaffold
+
 ## [2026-11-15] Planning — progress tracking and build plan created
 **Status:** done
 **Summary:** Created `ProjectProgress/` (status.md, changelog.md), `ContextFiles/03-build-plan.md` (8-phase plan), and a root `CLAUDE.md` so every Claude Code session resumes from the status file. No application code yet.

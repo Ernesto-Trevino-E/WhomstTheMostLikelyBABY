@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-15
-**Current phase:** Phase 0 — Scaffold (NOT STARTED)
-**Next action:** Enter plan mode, read the context files, and plan Phase 0.
+**Current phase:** Phase 1 — Design system (NOT STARTED)
+**Next action:** Enter plan mode, read the context files, and plan Phase 1.
 
 ---
 
@@ -14,7 +14,7 @@
 
 Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committed
 
-- [ ] **Phase 0** — Scaffold: Vite + React + TS, Tailwind v4 theme, fonts, env files
+- [x] **Phase 0** — Scaffold: Vite + React + TS, Tailwind v4 theme, fonts, env files
 - [ ] **Phase 1** — Design system: reusable components + dev gallery
 - [ ] **Phase 2** — Firebase layer: auth, data model, room codes, hooks, presence, first rules
 - [ ] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
@@ -27,7 +27,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Manual steps for the user (Claude Code cannot do these)
 
-- [ ] Create the Realtime Database in the Firebase console (choose region, locked mode) — needed before Phase 2
+- [ ] Create the Realtime Database in the Firebase console (choose region, locked mode) — needed before Phase 2. **Check first:** the `whomst-web` SDK config already returns a `databaseURL` (`impastababy-67140-default-rtdb`), so a default RTDB may already exist. Confirm in the console whether it exists and whether the other game uses it.
 - [ ] Enable **Anonymous** sign-in under Authentication — needed before Phase 2
 - [ ] Choose the Cloudflare deploy method (wrangler CLI vs GitHub auto-deploy) — needed before Phase 7
 - [ ] Add the deployed Cloudflare domain to Firebase Authorized domains — Phase 7
@@ -50,6 +50,14 @@ _None yet. If the build departs from anything in `ContextFiles/`, list it here w
 
 ---
 
+## Resolved decisions
+
+- **Firebase web app (Phase 0, 2026-11-15):** registered a separate web app `whomst-web` in the ImpastaBABY project, so the other game's `impasta-web` app is untouched. Its config is in `.env.local` (gitignored).
+
+---
+
 ## Blockers / notes
 
-_None yet._
+- No blockers.
+- npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.
+- Linting uses **oxlint** (create-vite's current default), not ESLint. Run it with `npm run lint`. Typecheck runs as part of `npm run build` (`tsc -b`).

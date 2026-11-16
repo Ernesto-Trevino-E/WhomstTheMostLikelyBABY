@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* Theme tokens: copied from ContextFiles/02-styling-brief.md section 4.2 */
+@theme {
+  --color-space: #0E0B1E;
+  --color-panel: #1B2036;
+  --color-slate: #4A5A7A;
+  --color-cream: #F4DB94;
+  --color-orange: #F58A1F;
+  --color-gold: #F2B65E;
+  --color-red: #E8231B;
+  --color-sage: #8FBFB0;
+
+  --color-p1: #FF6B5A;  --color-p2: #5BC0EB;  --color-p3: #9BC53D;
+  --color-p4: #A78BFA;  --color-p5: #F472B6;  --color-p6: #2EC4B6;
+  --color-p7: #FF9F1C;  --color-p8: #7C8CFF;  --color-p9: #8FBFB0;
+  --color-p10: #D291BC;
+
+  --font-display: "Orbitron", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-pill: 9999px;
+  --radius-panel: 1.25rem;   /* 20px */
+  --radius-chip: 0.75rem;    /* 12px */
+
+  --shadow-glow-gold: 0 0 24px 4px rgb(242 182 94 / 0.55);
+  --shadow-glow-orange: 0 0 16px 2px rgb(245 138 31 / 0.4);
+  --shadow-glow-red: 0 0 16px 2px rgb(232 35 27 / 0.5);
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+    color-scheme: dark;
+    background-color: var(--color-space);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    margin: 0;
+    background-color: var(--color-space);
+    /* Dot grid, low contrast so it never competes with text */
+    background-image: radial-gradient(circle, rgb(244 219 148 / 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+    color: var(--color-cream);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+}
+
+/* Respect reduced motion globally: animations and transitions become instant */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
