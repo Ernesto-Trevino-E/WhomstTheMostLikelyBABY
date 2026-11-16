@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-16
-**Current phase:** Phase 4 — Core game loop (NOT STARTED)
-**Next action:** Verify Phase 3 (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 4.
+**Current phase:** Phase 5 — Edge cases and room lifecycle (NOT STARTED)
+**Next action:** Verify Phase 4 (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 5.
 
 ---
 
@@ -18,7 +18,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] **Phase 1** — Design system: reusable components + dev gallery
 - [x] **Phase 2** — Firebase layer: auth, data model, room codes, hooks, presence, first rules
 - [x] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
-- [ ] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
+- [x] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
 - [ ] **Phase 5** — Edge cases and room lifecycle
 - [ ] **Phase 6** — Polish: animations, sound, haptics
 - [ ] **Phase 7** — Hardening, deploy to Cloudflare, QA
@@ -37,14 +37,14 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Open decisions (resolve in the phase noted, then record the answer here and in the changelog)
 
-- [ ] **Prompt -> Vote transition** (host button vs. automatic short delay) — decide in Phase 4
 - [ ] **Final-results highlights** (optional) — confirm in Phase 5
 
 ---
 
 ## Deviations from the context files
 
-- **Start is temporary (Phase 3):** Start sets `meta/phase = PROMPT` and shows a "Game started" placeholder with a host-only Back to lobby, until Phase 4 builds the loop.
+- **End Game is temporary (Phase 4):** End Game sets `FINAL_RESULTS` and shows a plain "Game over" crown list (`src/screens/GameOver.tsx`) with a host-only Back to lobby that keeps scores. Phase 5 replaces it with the real final results, Play Again (score reset) and Leave.
+- **Results are frozen in `round/tally` (Phase 4):** not in the Phase 2 data model. When voting ends, the counts are copied to `round/tally/{uid}` and crowns are added once, so a late ballot can't change the reveal. Needed a rules addition (deployed).
 
 - **Stale rooms are not reused for new codes (Phase 2):** the plan said a create could take over a stale room's code. Rules don't allow deleting a room yet, so `createRoom` just picks another code (279k codes). Revisit with room cleanup in Phase 5.
 - **Rules were not pre-validated (Phase 2):** the Firebase MCP's `validate_security_rules` and `get_security_rules` fail with "Invalid URL" for RTDB. Current rules were read through `realtimedatabase_get_data` on `/.settings/rules`, and the deploy itself compiled the rules (it succeeded).
@@ -53,6 +53,13 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Resolved decisions
 
+- **Prompt -> Vote (Phase 4, 2026-11-16, user):** the host taps **Start voting**; non-hosts see "Waiting for host...".
+- **Reveal -> Scoreboard (Phase 4, 2026-11-16, user):** the host taps **Scores**; no auto-advance.
+- **End Game for now (Phase 4, 2026-11-16, user):** simple Game over placeholder until Phase 5 (see Deviations).
+- **Draw and reshuffle (Phase 4, 2026-11-16):** `prompts/{id}/used` = drawn at least once (frees the per-player cap); `drawn` = this cycle. Order: unused submissions, then filtered stock + played submissions not in `drawn`, then clear `drawn` and draw from the whole pool (avoiding the prompt just played).
+- **Eligibility and auto-reveal (Phase 4, 2026-11-16):** `round/eligible` = active players at draw time; later joiners sit out (sage banner) and can't be voted for. Reveal starts automatically when every eligible player who is online has voted; offline players are not waited for. No votes = no crown.
+- **/#debug removed (Phase 4, 2026-11-16):** the real game UI covers what it tested.
+- **Button `danger-outline` variant (Phase 4):** red outline on dark, used for End Voting (brief: "red-outline End Voting").
 - **Stock deck (Phase 3, 2026-11-16, user):** the draft `04-prompt-deck.md` is used as-is (82 prompts: 15 Chill, 30 Cheeky, 17 Harsh, 20 Gotcha) in `src/data/prompts.ts`. Ids are `{category}-{nnn}` and stable: never renumber, only append.
 - **Kick (Phase 3, 2026-11-16, user):** included. The host writes `kicked/{uid} = true` (rules: only the room's `meta/hostUid`); the kicked tab removes its own player, name lock and score, then goes home. The same tab can't rejoin (KICKED). Kicked players never count as active or as host.
 - **Prompt submission limits (Phase 3, 2026-11-16, user):** ending only, ≤ 80 chars after cleanup (trim, collapse spaces, strip a pasted "Who's most likely to" and trailing ?.!, lowercase a capitalised first word); max 5 unused submissions per player; case-insensitive duplicates rejected against waiting, used and stock prompts. Client-enforced; rules cap length at 80.
@@ -77,8 +84,8 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 ## Blockers / notes
 
 - No blockers.
-- RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only); Phase 3 added the host-only `kicked` node. Rooms `XVJF` (Phase 2) and `RWRD` (Phase 3) are leftover test data; remove them with Phase 5 cleanup.
-- `/#debug` (Phase 2 debug screen) is still in the dev build; remove it once Phase 4 no longer needs it.
+- RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only); Phase 3 added the host-only `kicked` node, Phase 4 added `round/tally`. Rooms `XVJF` (Phase 2), `RWRD` (Phase 3) and `JSDX` (Phase 4) are leftover test data; remove them with Phase 5 cleanup.
+- Phase transitions run on the effective host's tab, guarded by a `meta` transaction (expected phase + round). Rules still let any signed-in player write `meta`, `round` and ballots in any phase: tighten in Phase 7.
 - A player's name lock stays with them after they drop out without pressing Leave. Phase 5 should free names (and remove player records) for players who have left.
 - Player color p9 (`#8FBFB0`) is the same as `sage` (HOST badge, info). A p9 player who is host has a sage avatar next to a sage badge. Kept as the brief says; consider changing p9 later.
 - npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.

@@ -62,8 +62,10 @@ export interface Round {
   /** Copied in so every device shows the same prompt. */
   text: string
   startedAt: number
-  /** Players allowed to vote this round. */
+  /** Players allowed to vote (and be voted for) this round: active players at draw time. */
   eligible?: Record<string, true>
+  /** Votes per player, frozen when voting ends (Reveal and Scoreboard read this). */
+  tally?: Record<string, number>
 }
 
 export interface Room {
@@ -99,6 +101,7 @@ export const paths = {
   scores: (code: string) => `${ROOT}/${code}/scores`,
   round: (code: string) => `${ROOT}/${code}/round`,
   prompts: (code: string) => `${ROOT}/${code}/prompts`,
+  drawn: (code: string) => `${ROOT}/${code}/drawn`,
   kicked: (code: string) => `${ROOT}/${code}/kicked`,
   ballots: (code: string, round: number) => `${ROOT}/${code}/ballots/${roundKey(round)}`,
   voted: (code: string, round: number) => `${ROOT}/${code}/voted/${roundKey(round)}`,

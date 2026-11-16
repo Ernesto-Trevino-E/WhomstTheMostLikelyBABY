@@ -19,6 +19,31 @@
 
 ---
 
+## [2026-11-16] Phase 4 — Core game loop
+**Status:** done
+**Summary:** Full rounds now play end to end: Start draws a prompt (player submissions first, then category-filtered stock, reshuffling when the pool runs out), the host taps Start voting, everyone votes anonymously (Lock In, "x / n VOTED" counts only, Add a prompt mid-round), Reveal starts on its own once everyone online has voted or when the host ends voting, ties crown everyone tied, and the Scoreboard shows the crown tally with Next Round, Prompts (filter between rounds) and End Game. End Game shows a temporary Game over list with Back to lobby.
+**Files added/changed:** `src/lib/game.ts` (draw + transitions), `src/screens/{PromptScreen,VoteScreen,RevealScreen,ScoreboardScreen,GameOver}.tsx`, `src/components/GameScreen.tsx`, `src/hooks/useAction.ts`, `src/screens/Room.tsx` (phase switch, auto-reveal), `src/lib/{rooms,model}.ts`, `src/components/Button.tsx` (`danger-outline`), `src/screens/Gallery.tsx`, `src/App.tsx` + `src/hooks/useHashRoute.ts` (debug route removed), `database.rules.json` (deployed). Removed `src/screens/DebugFirebase.tsx`.
+**Data model additions:** `round/tally/{uid}: number`, the vote counts frozen when voting ends (rules deployed). `meta/lastScoredRound` is now set in the same transaction that moves VOTE → REVEAL, and crowns use `increment(1)`.
+**Decisions made:** Prompt → Vote by the host's Start voting button (resolves the open decision); Reveal → Scoreboard by the host's Scores button; End Game shows a placeholder for now; draw/reshuffle rules, eligibility snapshot and the auto-reveal rule as recorded in status.md.
+**Deviations from context files:** End Game placeholder (`GameOver.tsx`) until Phase 5; results frozen in `round/tally` (new node).
+**Deferred / follow-ups:**
+- Phase 5: real final results, Play Again (reset scores and `drawn`?), Leave; fewer than 4 players → lobby modal; the self "reconnecting" banner; late joiners during PROMPT could be added to `eligible`; remove test rooms `XVJF`, `RWRD`, `JSDX`.
+- Phase 6: reveal sequence, prompt scale-in, lock-in pulse, scoreboard count-up.
+- Phase 7: rules so only the host moves `meta`/`round`, ballots only during VOTE and only from eligible players.
+- If the tab that ends voting dies between the phase change and the tally write, that round has no frozen tally (Reveal falls back to live counts) and no crowns. Rare; revisit in Phase 7.
+- The reshuffle branch (whole pool used up) was not reached in testing; it is a small pure function (`pickPrompt`).
+**How to verify:**
+- `npm run build` and `npm run lint` pass.
+- `npm run dev`, create a room as Ana, join Bo, Cy and Di in **new** tabs. As Bo, add a prompt in the lobby. Ana starts → every tab shows "ROUND 1" with Bo's prompt; only Ana has **Start voting**.
+- Vote screen: select a card, open **Add a prompt**, close it → the selection is still there. Lock In → cards dim, "1 / 4 VOTED" on that tab, no names.
+- Vote so two players tie (e.g. 2–2) → every tab goes to Reveal by itself, both are crowned ("It's a tie!"). Reload Ana's tab on Reveal → crowns don't change. Ana taps **Scores** → each winner shows +1 and x1.
+- Ana → Prompts, turn off Chill, Cheeky and Harsh → following rounds only use Gotcha prompts (`drawn` in the console shows `gotcha-*`).
+- Next Round, Start voting, then **End Voting** with no votes → "No votes this round, so nobody gets a crown."
+- During a vote, join a 5th tab (Eve) → sage banner, can't vote, not a vote option, counts stay "/ 4". Eve can vote in the next round.
+- Firebase console: `ballots/r{n}` hold only target uids; `round/tally` matches the reveal; `scores` went up once per round.
+- Scoreboard → **End Game** → confirm → Game over list on every tab; Ana's **Back to lobby** returns everyone to the lobby.
+**Commit:** Phase 4: Core game loop
+
 ## [2026-11-16] Phase 3 — Pre-game
 **Status:** done
 **Summary:** The real app now runs from landing to lobby on the live database. Players can create a room, or join one by code or shared link (`#/ABCD`), with errors shown under the field they belong to. The lobby updates live with join numbers, HOST/YOU/RECONNECTING badges, copy/share, host kick (with confirm), a host Prompts modal (category filter and submissions toggle), and anonymous "Add a prompt" for everyone. Start unlocks at 4 active players; non-hosts see "Waiting for host...". The 82-prompt stock deck is in `src/data/prompts.ts`.

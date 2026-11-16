@@ -80,6 +80,9 @@ export default function Gallery() {
         <Button variant="danger" fullWidth>
           End Game
         </Button>
+        <Button variant="danger-outline" fullWidth>
+          End Voting
+        </Button>
         <Button variant="ghost">Back</Button>
         <div className="flex flex-wrap gap-2">
           <Button size="sm">Small</Button>

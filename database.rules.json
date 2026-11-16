@@ -78,6 +78,7 @@
             "text": { ".validate": "newData.isString()" },
             "startedAt": { ".validate": "newData.isNumber()" },
             "eligible": { "$uid": { ".validate": "newData.val() === true" } },
+            "tally": { "$uid": { ".validate": "newData.isNumber() && newData.val() >= 0" } },
             "$other": { ".validate": false }
           },
           "kicked": {

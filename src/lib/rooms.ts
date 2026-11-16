@@ -9,11 +9,11 @@ import {
   dbRef,
   nameKey,
   paths,
-  type Phase,
   type Player,
   type RoomMeta,
   type RoomSettings,
 } from './model'
+import { drawNextRound } from './game'
 import { getServerOffset, isRoomStale } from './presence'
 import { generateCode, isValidCode, normalizeCode } from './roomCode'
 
@@ -178,9 +178,5 @@ export async function updateSettings(code: string, patch: Partial<RoomSettings>)
   await update(dbRef(paths.settings(code)), flat)
 }
 
-export async function setPhase(code: string, phase: Phase): Promise<void> {
-  await set(dbRef(`${paths.meta(code)}/phase`), phase)
-}
-
-/** Host presses Start. Phase 4 replaces this with the first prompt draw. */
-export const startGame = (code: string) => setPhase(code, 'PROMPT')
+/** Host presses Start: draws the first prompt (see game.ts). */
+export const startGame = (code: string) => drawNextRound(code)
