@@ -1,6 +1,7 @@
 // Presence and the 30s grace period. There is no server, so every client derives the same
 // answers from player records: `online` + `lastSeen` (set by onDisconnect) + server time.
 import {
+  get,
   onDisconnect,
   onValue,
   ref,
@@ -9,22 +10,40 @@ import {
   update,
 } from 'firebase/database'
 import { db } from './firebase'
-import { GRACE_MS, dbRef, paths, type Player } from './model'
+import { GRACE_MS, dbRef, nameKey, paths, type Player } from './model'
 
 /**
  * Marks the player online while connected and registers onDisconnect to mark them offline.
  * Only call once the player record exists. Returns a cleanup that stops it.
+ *
+ * On every (re)connect the record is read first: if I was away longer than the grace period
+ * I already count as "left", so the record is not revived and `onExpired` runs instead
+ * (the caller removes it and the player rejoins as a new player).
  */
-export function startPresence(code: string, uid: string): () => void {
+export function startPresence(
+  code: string,
+  uid: string,
+  onExpired?: (player: Player) => void,
+): () => void {
   const playerRef = dbRef(paths.player(code, uid))
+  let stopped = false
   const unsub = onValue(ref(db, '.info/connected'), (snap) => {
     if (snap.val() !== true) return
-    onDisconnect(playerRef)
-      .update({ online: false, lastSeen: serverTimestamp() })
-      .then(() => update(playerRef, { online: true, lastSeen: serverTimestamp() }))
-      .catch((err: unknown) => console.warn('[presence]', err))
+    void (async () => {
+      const [record, offset] = await Promise.all([get(playerRef), getServerOffset()])
+      if (stopped) return
+      const player = record.val() as Player | null
+      if (!player) return // pruned while I was away: Room shows the Join form
+      if (isLeft(player, Date.now() + offset)) {
+        onExpired?.(player)
+        return
+      }
+      await onDisconnect(playerRef).update({ online: false, lastSeen: serverTimestamp() })
+      await update(playerRef, { online: true, lastSeen: serverTimestamp() })
+    })().catch((err: unknown) => console.warn('[presence]', err))
   })
   return () => {
+    stopped = true
     unsub()
     onDisconnect(playerRef)
       .cancel()
@@ -74,6 +93,35 @@ export function isRoomStale(
   kicked?: Kicked,
 ): boolean {
   return activePlayers(players, serverNow, kicked).length === 0
+}
+
+/** Players offline for longer than the grace period. */
+export function leftPlayers(
+  players: Record<string, Player> | null | undefined,
+  serverNow: number,
+): [string, Player][] {
+  return Object.entries(players ?? {}).filter(([, p]) => isLeft(p, serverNow))
+}
+
+/**
+ * Remove the records of players who left (player, name lock, score) in one write. Rules
+ * allow anyone to delete a player record that has been offline for more than 30s.
+ */
+export async function pruneLeftPlayers(
+  code: string,
+  players: Record<string, Player> | null | undefined,
+  serverNow: number,
+): Promise<number> {
+  const gone = leftPlayers(players, serverNow)
+  if (gone.length === 0) return 0
+  const writes: Record<string, null> = {}
+  for (const [uid, p] of gone) {
+    writes[`players/${uid}`] = null
+    writes[`names/${nameKey(p.name)}`] = null
+    writes[`scores/${uid}`] = null
+  }
+  await update(dbRef(paths.room(code)), writes)
+  return gone.length
 }
 
 /** If I am the effective host but meta says otherwise, take the host role. */

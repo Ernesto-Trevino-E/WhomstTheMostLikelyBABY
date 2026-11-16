@@ -7,11 +7,11 @@ import { WaitingRow } from '../components/Screen'
 import { startVoting } from '../lib/game'
 import { formatPrompt } from '../lib/prompts'
 
-export default function PromptScreen({ code, isHost, round, onLeave }: GameProps) {
+export default function PromptScreen({ code, isHost, round, displayRound, onLeave }: GameProps) {
   const { busy, run } = useAction()
   return (
     <GameScreen
-      label={`Round ${round.number}`}
+      label={`Round ${displayRound}`}
       isHost={isHost}
       onLeave={onLeave}
       footer={

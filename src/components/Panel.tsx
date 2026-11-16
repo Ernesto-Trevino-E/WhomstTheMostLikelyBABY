@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react'
 import { cn } from '../lib/cn'
 
-export type PanelTone = 'slate' | 'sage' | 'red' | 'orange' | 'gold'
+export type PanelTone = 'slate' | 'sage' | 'red' | 'orange' | 'gold' | 'cream'
 
 export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
   /** `double` adds an inner line inside the outline (used for the prompt and room code). */
@@ -17,6 +17,7 @@ const tones: Record<PanelTone, { border: string; inner: string }> = {
   red: { border: 'border-red', inner: 'before:border-red/50' },
   orange: { border: 'border-orange', inner: 'before:border-orange/50' },
   gold: { border: 'border-gold', inner: 'before:border-gold/50' },
+  cream: { border: 'border-cream', inner: 'before:border-cream/50' },
 }
 
 export function Panel({

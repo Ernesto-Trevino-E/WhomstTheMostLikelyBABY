@@ -110,6 +110,7 @@ export default function Gallery() {
           </p>
         </Panel>
         <Panel tone="sage">Sage tone (info / notices).</Panel>
+        <Panel tone="cream">Cream tone (2nd place on the final podium).</Panel>
         <Panel tone="red">Red tone (danger / alerts).</Panel>
         <Panel tone="gold" className="shadow-glow-gold">
           Gold tone + glow (crown treatment only).

@@ -22,7 +22,7 @@ export interface VoteScreenProps extends GameProps {
 }
 
 export default function VoteScreen(props: VoteScreenProps) {
-  const { code, uid, isHost, round, players, kicked, serverNow, settings, prompts, voted, onLeave } =
+  const { code, uid, isHost, round, displayRound, players, kicked, serverNow, settings, prompts, voted, onLeave } =
     props
   const vote = useAction()
   const end = useAction()
@@ -44,7 +44,7 @@ export default function VoteScreen(props: VoteScreenProps) {
 
   return (
     <GameScreen
-      label={`Round ${round.number} · Vote`}
+      label={`Round ${displayRound} · Vote`}
       isHost={isHost}
       onLeave={onLeave}
       footer={

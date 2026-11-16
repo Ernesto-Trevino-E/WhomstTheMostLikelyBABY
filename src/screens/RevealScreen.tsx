@@ -18,7 +18,7 @@ export interface RevealScreenProps extends GameProps {
 }
 
 export default function RevealScreen(props: RevealScreenProps) {
-  const { code, uid, isHost, hostUid, round, players, kicked, liveCounts, onLeave } = props
+  const { code, uid, isHost, hostUid, round, displayRound, players, kicked, liveCounts, onLeave } = props
   const { busy, run } = useAction()
 
   const counts = round.tally ?? liveCounts
@@ -33,7 +33,7 @@ export default function RevealScreen(props: RevealScreenProps) {
 
   return (
     <GameScreen
-      label={`Round ${round.number} · Results`}
+      label={`Round ${displayRound} · Results`}
       isHost={isHost}
       onLeave={onLeave}
       footer={

@@ -16,7 +16,7 @@ import { activePlayers, isReconnecting } from '../lib/presence'
 import { waitingTotal } from '../lib/prompts'
 
 export default function ScoreboardScreen(props: GameProps) {
-  const { code, uid, isHost, hostUid, round, players, kicked, scores, settings, prompts, serverNow, onLeave } =
+  const { code, uid, isHost, hostUid, round, displayRound, players, kicked, scores, settings, prompts, serverNow, onLeave } =
     props
   const { busy, run } = useAction()
   const [modal, setModal] = useState<null | 'prompts' | 'end'>(null)
@@ -28,7 +28,7 @@ export default function ScoreboardScreen(props: GameProps) {
 
   return (
     <GameScreen
-      label={`Round ${round.number} · Scores`}
+      label={`Round ${displayRound} · Scores`}
       isHost={isHost}
       onLeave={onLeave}
       footer={

@@ -3,6 +3,7 @@ import { get, runTransaction, serverTimestamp, set, update } from 'firebase/data
 import { ensureSignedIn } from './firebase'
 import {
   DEFAULT_SETTINGS,
+  GRACE_MS,
   NAME_MAX,
   ROOT,
   cleanName,
@@ -14,7 +15,7 @@ import {
   type RoomSettings,
 } from './model'
 import { drawNextRound } from './game'
-import { getServerOffset, isRoomStale } from './presence'
+import { getServerOffset, isRoomStale, pruneLeftPlayers } from './presence'
 import { generateCode, isValidCode, normalizeCode } from './roomCode'
 
 export type RoomErrorCode =
@@ -63,25 +64,32 @@ export async function createRoom(rawName: string): Promise<JoinResult> {
   const name = validName(rawName)
   const { uid } = await ensureSignedIn()
 
+  // Claim a code: only commits if no room exists at it.
+  const claim = async (code: string) =>
+    (
+      await runTransaction(
+        dbRef(paths.meta(code)),
+        (current: RoomMeta | null) => {
+          if (current !== null) return undefined
+          return {
+            createdAt: serverTimestamp(),
+            hostUid: uid,
+            phase: 'LOBBY',
+            nextJoinNumber: 2,
+            roundNumber: 0,
+            lastScoredRound: 0,
+            gameBaseRound: 0,
+          }
+        },
+        { applyLocally: false },
+      )
+    ).committed
+
   for (let i = 0; i < MAX_CODE_ATTEMPTS; i++) {
     const code = generateCode()
-    // Claim the code: only commits if no room exists at this code.
-    const result = await runTransaction(
-      dbRef(paths.meta(code)),
-      (current: RoomMeta | null) => {
-        if (current !== null) return undefined
-        return {
-          createdAt: serverTimestamp(),
-          hostUid: uid,
-          phase: 'LOBBY',
-          nextJoinNumber: 2,
-          roundNumber: 0,
-          lastScoredRound: 0,
-        }
-      },
-      { applyLocally: false },
-    )
-    if (!result.committed) continue
+    // A taken code whose room is stale gets cleaned up and reused.
+    const ok = (await claim(code)) || ((await deleteRoomIfStale(code)) && (await claim(code)))
+    if (!ok) continue
 
     const room = `${ROOT}/${code}`
     const player: Record<keyof Player, unknown> = {
@@ -124,7 +132,10 @@ export async function joinRoom(rawCode: string, rawName: string): Promise<JoinRe
   if (existing) return { code, uid, joinNumber: existing.joinNumber, rejoined: true }
 
   const serverNow = Date.now() + (await getServerOffset())
-  if (isRoomStale(players, serverNow, kicked)) throw new RoomError('ROOM_NOT_FOUND')
+  if (isRoomStale(players, serverNow, kicked)) {
+    await deleteRoomIfStale(code)
+    throw new RoomError('ROOM_NOT_FOUND')
+  }
 
   // Lock the name (case-insensitive).
   const key = nameKey(name)
@@ -157,13 +168,48 @@ export async function joinRoom(rawCode: string, rawName: string): Promise<JoinRe
   return { code, uid, joinNumber, rejoined: false }
 }
 
-/** Leave on purpose: removes my player, name lock and score. Host passes via presence.ts. */
+/**
+ * Leave on purpose: removes my player, name lock and score. Host passes via presence.ts.
+ * If nobody is left in the room afterwards, the room is deleted.
+ */
 export async function leaveRoom(code: string, uid: string, name: string): Promise<void> {
   await update(dbRef(paths.room(code)), {
     [`players/${uid}`]: null,
     [`names/${nameKey(name)}`]: null,
     [`scores/${uid}`]: null,
   })
+  await deleteRoomIfStale(code)
+}
+
+/**
+ * Room cleanup (there is no server): if every player has left, remove the left players'
+ * records, then delete the whole room. Rules only allow the delete once `players` is empty.
+ * Never throws; returns true when the room is gone.
+ */
+export async function deleteRoomIfStale(code: string): Promise<boolean> {
+  try {
+    const [metaSnap, playersSnap, kickedSnap, offset] = await Promise.all([
+      get(dbRef(paths.meta(code))),
+      get(dbRef(paths.players(code))),
+      get(dbRef(paths.kicked(code))),
+      getServerOffset(),
+    ])
+    const meta = metaSnap.val() as RoomMeta | null
+    const players = playersSnap.val() as Record<string, Player> | null
+    const kicked = kickedSnap.val() as Record<string, true> | null
+    const serverNow = Date.now() + offset
+    // A room created a moment ago may not have its first player written yet.
+    if (meta && serverNow - meta.createdAt < GRACE_MS) return false
+    if (!isRoomStale(players, serverNow, kicked)) return false
+    const pruned = await pruneLeftPlayers(code, players, serverNow)
+    // Anyone still on record (e.g. a kicked tab that is still open) blocks the delete.
+    if (Object.keys(players ?? {}).length > pruned) return false
+    await set(dbRef(paths.room(code)), null)
+    return true
+  } catch (err) {
+    console.warn('[cleanup]', code, err)
+    return false
+  }
 }
 
 /** Host only (rules check meta/hostUid). The kicked tab sees the flag and calls leaveRoom. */

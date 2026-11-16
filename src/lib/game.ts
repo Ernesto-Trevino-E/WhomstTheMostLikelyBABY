@@ -7,6 +7,7 @@ import {
   DEFAULT_SETTINGS,
   dbRef,
   paths,
+  roundKey,
   type Phase,
   type Player,
   type RoomMeta,
@@ -123,10 +124,14 @@ export async function drawNextRound(code: string): Promise<boolean> {
   )
 
   const n = meta.roundNumber + 1
-  const ok = await transition(code, ['LOBBY', 'SCOREBOARD'], meta.roundNumber, () => ({
-    phase: 'PROMPT',
-    roundNumber: n,
-  }))
+  // Start from the lobby begins a fresh game: round labels restart at 1, scores reset.
+  let fresh = false
+  const ok = await transition(code, ['LOBBY', 'SCOREBOARD'], meta.roundNumber, (m) => {
+    fresh = m.phase === 'LOBBY'
+    return fresh
+      ? { phase: 'PROMPT', roundNumber: n, gameBaseRound: m.roundNumber }
+      : { phase: 'PROMPT', roundNumber: n }
+  })
   if (!ok) return false
 
   const writes: Record<string, unknown> = {
@@ -142,13 +147,42 @@ export async function drawNextRound(code: string): Promise<boolean> {
   if (pick.reshuffle) writes.drawn = { [pick.id]: true }
   else writes[`drawn/${pick.id}`] = true
   if (pick.source === 'player' && prompts?.[pick.id]) writes[`prompts/${pick.id}/used`] = true
+  if (fresh) writes.scores = Object.fromEntries(Object.keys(players ?? {}).map((uid) => [uid, 0]))
   await update(dbRef(paths.room(code)), writes)
   return true
 }
 
-/** Host: Prompt -> Vote. */
-export const startVoting = (code: string, round: number) =>
-  transition(code, ['PROMPT'], round, () => ({ phase: 'VOTE' }))
+/**
+ * Host: Prompt -> Vote. Players who joined while the prompt was showing play this round
+ * too: they are added to `round/eligible` before voting opens.
+ */
+export async function startVoting(code: string, round: number): Promise<boolean> {
+  const [metaSnap, playersSnap, kickedSnap, offset] = await Promise.all([
+    get(dbRef(paths.meta(code))),
+    get(dbRef(paths.players(code))),
+    get(dbRef(paths.kicked(code))),
+    getServerOffset(),
+  ])
+  const meta = metaSnap.val() as RoomMeta | null
+  if (!meta || meta.phase !== 'PROMPT' || meta.roundNumber !== round) return false
+  const active = activePlayers(
+    playersSnap.val() as Record<string, Player> | null,
+    Date.now() + offset,
+    kickedSnap.val() as Record<string, true> | null,
+  )
+  const writes: Record<string, true> = {}
+  for (const [uid] of active) writes[`round/eligible/${uid}`] = true
+  if (active.length > 0) await update(dbRef(paths.room(code)), writes)
+  return transition(code, ['PROMPT'], round, () => ({ phase: 'VOTE' }))
+}
+
+const IN_GAME: Phase[] = ['PROMPT', 'VOTE', 'REVEAL', 'SCOREBOARD']
+
+/** Host: fewer than 4 players mid-game, so everyone goes back to the lobby. */
+export const returnToLobby = (code: string, round: number) =>
+  transition(code, IN_GAME, round, () => ({ phase: 'LOBBY' }))
+
+export const isInGame = (phase: Phase | undefined) => phase !== undefined && IN_GAME.includes(phase)
 
 /**
  * Vote -> Reveal (everyone voted, or the host ended voting early). The tab that wins the
@@ -173,13 +207,46 @@ export async function endVoting(code: string, round: number): Promise<boolean> {
 export const showScores = (code: string, round: number) =>
   transition(code, ['REVEAL'], round, () => ({ phase: 'SCOREBOARD' }))
 
-/** Host: Scoreboard -> Final results (Phase 4 shows a simple placeholder). */
+/** Host: Scoreboard -> Final results. */
 export const endGame = (code: string, round: number) =>
   transition(code, ['SCOREBOARD'], round, () => ({ phase: 'FINAL_RESULTS' }))
 
-/** Host: Final results -> Lobby (scores are kept until Phase 5 adds Play Again). */
-export const backToLobby = (code: string, round: number) =>
+/** Host: Play Again (Final results -> Lobby). Scores reset when the next game starts. */
+export const playAgain = (code: string, round: number) =>
   transition(code, ['FINAL_RESULTS'], round, () => ({ phase: 'LOBBY' }))
+
+export interface Highlights {
+  /** Most votes one player got in a single round (only when at least 2). */
+  landslide: { uids: string[]; votes: number; round: number } | null
+  /** Rounds where two or more players tied for the crown. */
+  ties: number
+}
+
+/**
+ * Highlights for this game, from the anonymous ballots of rounds base+1..last (no voter
+ * data is involved). `round` in the result is the game-relative round number.
+ */
+export function computeHighlights(
+  ballots: Record<string, Record<string, string>> | null | undefined,
+  base: number,
+  last: number,
+): Highlights {
+  let landslide: Highlights['landslide'] = null
+  let ties = 0
+  for (let r = base + 1; r <= last; r++) {
+    const counts = tally(ballots?.[roundKey(r)])
+    if (crownedUids(counts).length > 1) ties++
+    const top = Math.max(0, ...Object.values(counts))
+    if (top >= 2 && (!landslide || top > landslide.votes)) {
+      landslide = {
+        uids: Object.keys(counts).filter((u) => counts[u] === top),
+        votes: top,
+        round: r - base,
+      }
+    }
+  }
+  return { landslide, ties }
+}
 
 
 /** This round's voters and vote options: eligible players still in the room, by join number. */

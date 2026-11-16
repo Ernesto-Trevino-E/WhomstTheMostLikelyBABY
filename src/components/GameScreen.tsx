@@ -13,6 +13,10 @@ export interface GameProps {
   isHost: boolean
   hostUid: string | null
   round: Round
+  /** Round number within the current game (round.number - gameBaseRound). */
+  displayRound: number
+  /** meta.gameBaseRound: rounds after it belong to this game. */
+  gameBaseRound: number
   players: Record<string, Player> | null
   kicked: Record<string, true> | null
   scores: Record<string, number> | null
@@ -29,9 +33,11 @@ export interface GameScreenProps {
   children: ReactNode
   /** Sticky bottom area (host buttons or WaitingRow). */
   footer?: ReactNode
+  /** Hide the header Leave (when the footer has its own). */
+  hideLeave?: boolean
 }
 
-export function GameScreen({ label, isHost, onLeave, children, footer }: GameScreenProps) {
+export function GameScreen({ label, isHost, onLeave, children, footer, hideLeave }: GameScreenProps) {
   const [leaveOpen, setLeaveOpen] = useState(false)
   return (
     <Screen className="gap-5">
@@ -39,9 +45,11 @@ export function GameScreen({ label, isHost, onLeave, children, footer }: GameScr
         <p className="font-display text-sm font-bold tracking-[0.2em] text-sage uppercase">
           {label}
         </p>
-        <Button variant="ghost" size="sm" onClick={() => setLeaveOpen(true)}>
-          Leave
-        </Button>
+        {!hideLeave && (
+          <Button variant="ghost" size="sm" onClick={() => setLeaveOpen(true)}>
+            Leave
+          </Button>
+        )}
       </header>
 
       {children}

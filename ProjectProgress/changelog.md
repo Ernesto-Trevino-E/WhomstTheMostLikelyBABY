@@ -19,6 +19,29 @@
 
 ---
 
+## [2026-11-16] Phase 5 — Edge cases and room lifecycle
+**Status:** done
+**Summary:** Every edge case in `01-game-flow.md` §3 now works. Players who are gone for more than 30s are removed (names freed) and come back as new players, so an original host who returns doesn't get the role back. You see a red "Reconnecting..." banner when your own connection drops. A player who joins while the prompt is showing plays that round. Dropping below 4 players mid-game sends everyone to the lobby with a notice. End Game shows the real Final results (podium, leaderboard, highlights) with host Play Again and Leave. Rooms are deleted when the last player leaves or when someone later hits a stale room's code.
+**Files added/changed:** `src/screens/FinalResults.tsx` (new; replaces `GameOver.tsx`), `src/hooks/useConnected.ts` (new), `src/screens/Room.tsx` (prune, below-4 return, notice modal, self banner), `src/lib/{presence,rooms,game,model}.ts`, `src/hooks/usePresence.ts`, `src/components/{GameScreen,Panel}.tsx` (game-relative round, `hideLeave`, `cream` tone), the four round screens (round label), `src/screens/Gallery.tsx`, `database.rules.json` (deployed).
+**Data model additions:** `meta/gameBaseRound` (roundNumber when the current game started).
+**Decisions made:** Play Again is a host button and Start always resets scores; highlights included (Most crowned, Biggest landslide, Ties) from ballots; cleanup = last Leave + lazy cleanup on join/create; left players are pruned by the host; Start voting adds PROMPT-time joiners. Details under Resolved decisions in status.md (the "Final-results highlights" open decision is resolved).
+**Deviations from context files:** abandoned rooms are deleted lazily rather than the moment the last player leaves (no server). The Phase 2 "stale rooms aren't reused" deviation is gone: create now cleans up and reuses a stale code.
+**Rules deployed:** room delete only when `players` is empty; anyone may delete a player record that is offline with `lastSeen` > 30s ago; a name lock may be deleted once its player record is gone; `meta/gameBaseRound` validated. Live rules were read first and only `whomst` was present. Test rooms `XVJF`, `RWRD`, `JSDX` were deleted with the Firebase MCP (with approval).
+**Deferred / follow-ups:**
+- Phase 6: podium/highlight entrance animations, sounds for the final screen.
+- Phase 7: rules so only the host prunes/moves phase; the join-vs-last-Leave race (a join can land in a room just deleted); highlights read `ballots`, so a ballot written after voting ended (not possible from the UI) would count there but not in crowns.
+- Abandoned rooms nobody touches again stay in the database (accepted trade-off).
+**How to verify** (use **new** tabs, not Duplicate; 30s waits are the grace period):
+- `npm run build` and `npm run lint` pass.
+- Create as Ana, join Bo, Cy, Di → Start. While the prompt shows, join Eve in a new tab → after Start voting, Eve can vote (no banner). Join Fay during the vote → sage banner, sits out.
+- DevTools → Network → Offline on Bo's tab → red "Reconnecting..." banner on Bo, RECONNECTING on the others. Back online within 30s → same number, banner gone.
+- Close Ana's (host) tab, wait ~35s → Bo is HOST with a toast; Ana is gone from the list. Open the room link in a new tab and join as "Ana" → the name is free and Ana gets a new number, not host.
+- With exactly 4 players mid-round, one presses Leave (or closes the tab and you wait ~35s) → every tab goes to the lobby with "Not enough players. Back to the lobby to wait for more."
+- Play a couple of rounds with a tie → Scores → End Game → podium (gold for winners with a glow, cream 2nd, sage 3rd; 0-crown players are not on the podium), leaderboard, highlights. Non-hosts see Waiting + Leave. Host **Play Again** → lobby (no notice modal) → Start → "ROUND 1", all scores 0.
+- Everyone presses Leave (room older than 30s) → `/whomst/rooms/{code}` is gone in the Firebase console. Create another room, close its only tab, wait ~35s, try to join its code → "No open room with that code." and the room is gone.
+- Checked in this session (in-app browser, 5 tabs): PROMPT-time joiner eligible, 2–2 tie auto-reveal, Final results + highlights, Play Again → Round 1 with scores 0, below-4 modal, self banner on/off, host + another player offline 35s → pruned and Bo became host, returning Ana rejoined as #6, last Leave deleted the room, lazy cleanup on join.
+**Commit:** Phase 5: Edge cases and room lifecycle
+
 ## [2026-11-16] Phase 4 — Core game loop
 **Status:** done
 **Summary:** Full rounds now play end to end: Start draws a prompt (player submissions first, then category-filtered stock, reshuffling when the pool runs out), the host taps Start voting, everyone votes anonymously (Lock In, "x / n VOTED" counts only, Add a prompt mid-round), Reveal starts on its own once everyone online has voted or when the host ends voting, ties crown everyone tied, and the Scoreboard shows the crown tally with Next Round, Prompts (filter between rounds) and End Game. End Game shows a temporary Game over list with Back to lobby.

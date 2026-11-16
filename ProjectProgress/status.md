@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-16
-**Current phase:** Phase 5 — Edge cases and room lifecycle (NOT STARTED)
-**Next action:** Verify Phase 4 (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 5.
+**Current phase:** Phase 6 — Polish (NOT STARTED)
+**Next action:** Verify Phase 5 (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 6.
 
 ---
 
@@ -19,7 +19,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] **Phase 2** — Firebase layer: auth, data model, room codes, hooks, presence, first rules
 - [x] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
 - [x] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
-- [ ] **Phase 5** — Edge cases and room lifecycle
+- [x] **Phase 5** — Edge cases and room lifecycle
 - [ ] **Phase 6** — Polish: animations, sound, haptics
 - [ ] **Phase 7** — Hardening, deploy to Cloudflare, QA
 
@@ -37,21 +37,28 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Open decisions (resolve in the phase noted, then record the answer here and in the changelog)
 
-- [ ] **Final-results highlights** (optional) — confirm in Phase 5
+- None at the moment.
 
 ---
 
 ## Deviations from the context files
 
-- **End Game is temporary (Phase 4):** End Game sets `FINAL_RESULTS` and shows a plain "Game over" crown list (`src/screens/GameOver.tsx`) with a host-only Back to lobby that keeps scores. Phase 5 replaces it with the real final results, Play Again (score reset) and Leave.
+- **Rooms abandoned without Leave are deleted lazily (Phase 5):** with no server, a room whose players all close their tabs can't delete itself. It is deleted when the last player presses Leave, or later when a join or create hits its code (user's choice, 2026-11-16). Rooms nobody touches again stay in the database.
+- **`meta/gameBaseRound` (Phase 5):** new meta field (rules deployed). Round labels and highlights are relative to it, so a second game in the same room starts at Round 1 while ballot keys stay unique.
 - **Results are frozen in `round/tally` (Phase 4):** not in the Phase 2 data model. When voting ends, the counts are copied to `round/tally/{uid}` and crowns are added once, so a late ballot can't change the reveal. Needed a rules addition (deployed).
-
-- **Stale rooms are not reused for new codes (Phase 2):** the plan said a create could take over a stale room's code. Rules don't allow deleting a room yet, so `createRoom` just picks another code (279k codes). Revisit with room cleanup in Phase 5.
 - **Rules were not pre-validated (Phase 2):** the Firebase MCP's `validate_security_rules` and `get_security_rules` fail with "Invalid URL" for RTDB. Current rules were read through `realtimedatabase_get_data` on `/.settings/rules`, and the deploy itself compiled the rules (it succeeded).
 
 ---
 
 ## Resolved decisions
+
+- **Play Again (Phase 5, 2026-11-16, user):** host button; everyone returns to the lobby. Non-hosts see "Waiting for host..." and Leave. **Start Game always starts a fresh game:** scores reset to 0 and round labels restart at 1 (covers Play Again and the below-4 return). `drawn` is kept so the next game doesn't repeat prompts straight away.
+- **Final-results highlights (Phase 5, 2026-11-16, user):** included as three small panels computed from this game's anonymous ballots (no new data): Most crowned, Biggest landslide (most votes one player got in a round, at least 2), Ties (rounds that ended tied). The podium shows only players with at least one crown; tied players share a rank and a tone (gold 1st, cream 2nd, sage 3rd).
+- **Room cleanup (Phase 5, 2026-11-16, user):** last Leave deletes the room; a join or create that hits a stale room deletes it (create then reuses the code). No sweep index. Rooms younger than 30s are never cleaned up (their first player may not be written yet).
+- **Players who left (Phase 5, 2026-11-16):** the effective host deletes records (player, name lock, score) of players offline for more than 30s, which frees their names. A tab that comes back after the grace period finds its record gone (or removes it itself) and sees the Join form: it rejoins as a new player and never gets the host role back. Rules allow anyone to delete a player record that has been offline for more than 30s.
+- **Below 4 players (Phase 5, 2026-11-16):** counts players online or within grace, so it fires about 30s after the 4th player drops (immediately on Leave). Not checked on Final results. Every tab that saw the game shows the sage "Not enough players" modal.
+- **Late join during PROMPT (Phase 5, 2026-11-16):** Start voting adds active players to `round/eligible`, so a player who joined while the prompt showed plays that round. Joining during VOTE/REVEAL still sits out.
+- **Self reconnecting banner (Phase 5, 2026-11-16):** red banner fixed at the top while `.info/connected` is false (only after the first connection, so no flash on load).
 
 - **Prompt -> Vote (Phase 4, 2026-11-16, user):** the host taps **Start voting**; non-hosts see "Waiting for host...".
 - **Reveal -> Scoreboard (Phase 4, 2026-11-16, user):** the host taps **Scores**; no auto-advance.
@@ -84,9 +91,10 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 ## Blockers / notes
 
 - No blockers.
-- RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only); Phase 3 added the host-only `kicked` node, Phase 4 added `round/tally`. Rooms `XVJF` (Phase 2), `RWRD` (Phase 3) and `JSDX` (Phase 4) are leftover test data; remove them with Phase 5 cleanup.
+- RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only); Phase 3 added the host-only `kicked` node, Phase 4 added `round/tally`, Phase 5 added room delete (only when it has no players), deleting players offline > 30s, freeing their name locks, and `meta/gameBaseRound`. Test rooms `XVJF`, `RWRD`, `JSDX` were deleted in Phase 5; `/whomst` was empty after Phase 5 testing.
 - Phase transitions run on the effective host's tab, guarded by a `meta` transaction (expected phase + round). Rules still let any signed-in player write `meta`, `round` and ballots in any phase: tighten in Phase 7.
-- A player's name lock stays with them after they drop out without pressing Leave. Phase 5 should free names (and remove player records) for players who have left.
+- Known race (Phase 7): if someone joins at the exact moment the last player's Leave deletes the room, the join can write a player into a room with no `meta`.
+- Testing tip: when driving the dev app from the browser console, import app modules (`/src/lib/*.ts`) only. Importing `/node_modules/.vite/deps/firebase_database.js` without its `?v=` hash loads a second Firebase SDK copy and breaks writes in that tab (stack overflow in `ChildrenNode.equals`).
 - Player color p9 (`#8FBFB0`) is the same as `sage` (HOST badge, info). A p9 player who is host has a sage avatar next to a sage badge. Kept as the brief says; consider changing p9 later.
 - npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.
 - Linting uses **oxlint** (create-vite's current default), not ESLint. Run it with `npm run lint`. Typecheck runs as part of `npm run build` (`tsc -b`).

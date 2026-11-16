@@ -1,12 +1,15 @@
 // Room container: owns the live listeners, presence, host succession and kick handling,
 // then shows the screen for the room's phase. Visiting #/ABCD as a non-member shows Join.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Banner } from '../components/Banner'
 import { Button } from '../components/Button'
+import { Modal } from '../components/Modal'
 import { Panel } from '../components/Panel'
 import type { GameProps } from '../components/GameScreen'
 import { ScreenTransition } from '../components/ScreenTransition'
 import { Screen, WaitingRow } from '../components/Screen'
 import { useAuth } from '../hooks/useAuth'
+import { useConnectionLost } from '../hooks/useConnected'
 import { navigate } from '../hooks/useHashRoute'
 import { usePresence } from '../hooks/usePresence'
 import {
@@ -21,10 +24,17 @@ import {
 } from '../hooks/useRoom'
 import { useServerNow } from '../hooks/useServerNow'
 import { useToast } from '../hooks/useToast'
-import { claimHostIfNeeded, effectiveHost } from '../lib/presence'
-import { eligiblePlayers, endVoting } from '../lib/game'
+import {
+  activePlayers,
+  claimHostIfNeeded,
+  effectiveHost,
+  leftPlayers,
+  pruneLeftPlayers,
+} from '../lib/presence'
+import { eligiblePlayers, endVoting, isInGame, returnToLobby } from '../lib/game'
+import { MIN_PLAYERS, type Phase } from '../lib/model'
 import { leaveRoom } from '../lib/rooms'
-import GameOver from './GameOver'
+import FinalResults from './FinalResults'
 import JoinRoom from './JoinRoom'
 import Lobby from './Lobby'
 import PromptScreen from './PromptScreen'
@@ -57,9 +67,55 @@ export default function Room({ code }: { code: string }) {
 
   const me = uid ? players.data?.[uid] : undefined
   const isKicked = Boolean(uid && kicked.data?.[uid])
-  usePresence(code, uid, Boolean(me) && !isKicked && !leaving)
+  const connectionLost = useConnectionLost()
+
+  // Back after the grace period: I already count as left, so remove my stale record and
+  // show the Join form (I rejoin as a new player, and don't get the host role back).
+  usePresence(code, uid, Boolean(me) && !isKicked && !leaving, (p) => {
+    if (!uid) return
+    leaveRoom(code, uid, p.name)
+      .catch((err: unknown) => console.warn('[expired]', err))
+      .finally(() => toast.show('You were away too long. Join again as a new player.', 'error'))
+  })
 
   const hostUid = effectiveHost(players.data, serverNow, kicked.data)
+  const isHost = Boolean(uid && hostUid === uid)
+  const activeCount = activePlayers(players.data, serverNow, kicked.data).length
+
+  // The host removes the records of players who left (frees their names).
+  const leftKey = leftPlayers(players.data, serverNow)
+    .map(([pid]) => pid)
+    .join(',')
+  const prunedKey = useRef('')
+  useEffect(() => {
+    if (!isHost || !leftKey || prunedKey.current === leftKey) return
+    prunedKey.current = leftKey
+    pruneLeftPlayers(code, players.data, serverNow).catch((err: unknown) => {
+      prunedKey.current = ''
+      console.warn('[prune]', err)
+    })
+  }, [isHost, leftKey, code, players.data, serverNow])
+
+  // Fewer than 4 players mid-game: the host sends everyone back to the lobby.
+  const returnedRound = useRef(-1)
+  useEffect(() => {
+    if (!isHost || !isInGame(phase) || activeCount >= MIN_PLAYERS) return
+    if (returnedRound.current === roundNumber) return
+    returnedRound.current = roundNumber
+    returnToLobby(code, roundNumber).catch((err: unknown) => {
+      returnedRound.current = -1
+      console.warn('[below-min]', err)
+    })
+  }, [isHost, phase, activeCount, roundNumber, code])
+
+  // Every tab: in-game -> lobby (not via Play Again) shows the "Not enough players" notice.
+  const [notEnough, setNotEnough] = useState(false)
+  const prevPhase = useRef<Phase | undefined>(undefined)
+  useEffect(() => {
+    const prev = prevPhase.current
+    prevPhase.current = phase
+    if (phase === 'LOBBY' && isInGame(prev)) setNotEnough(true)
+  }, [phase])
 
   // Host succession: whoever becomes the effective host writes it to meta.
   useEffect(() => {
@@ -71,7 +127,6 @@ export default function Room({ code }: { code: string }) {
 
   // Auto-advance to Reveal once every eligible player who is online has voted. Only the
   // effective host does it (the next host takes over if they drop); endVoting is guarded.
-  const isHost = Boolean(uid && hostUid === uid)
   const endedRound = useRef(0)
   const currentRound = round.data?.number === roundNumber ? round.data : null
   useEffect(() => {
@@ -142,8 +197,33 @@ export default function Room({ code }: { code: string }) {
   }
   if (!me) return <JoinRoom key={code} initialCode={code} />
 
+  const frame = (content: ReactNode) => (
+    <>
+      {connectionLost && (
+        <div className="fixed inset-x-0 top-0 z-40 mx-auto w-full max-w-[480px] px-4 pt-2">
+          <Banner type="alert">Reconnecting... you keep your spot for 30 seconds.</Banner>
+        </div>
+      )}
+      {content}
+      <Modal
+        open={notEnough}
+        onClose={() => setNotEnough(false)}
+        title="Back to the lobby"
+        tone="sage"
+        hideClose
+        actions={
+          <Button fullWidth onClick={() => setNotEnough(false)}>
+            OK
+          </Button>
+        }
+      >
+        <p>Not enough players. Back to the lobby to wait for more.</p>
+      </Modal>
+    </>
+  )
+
   if (meta.data.phase === 'LOBBY') {
-    return (
+    return frame(
       <Lobby
         code={code}
         uid={uid}
@@ -154,25 +234,28 @@ export default function Room({ code }: { code: string }) {
         hostUid={hostUid}
         serverNow={serverNow}
         onLeave={leave}
-      />
+      />,
     )
   }
 
   // In game: wait until the round written by the draw matches meta (they are two writes).
   if (!currentRound) {
-    return (
+    return frame(
       <Screen className="justify-center">
         <WaitingRow label="Loading round" />
-      </Screen>
+      </Screen>,
     )
   }
 
+  const gameBaseRound = Math.min(meta.data.gameBaseRound ?? 0, roundNumber - 1)
   const game: GameProps = {
     code,
     uid,
     isHost,
     hostUid,
     round: currentRound,
+    displayRound: roundNumber - gameBaseRound,
+    gameBaseRound,
     players: players.data,
     kicked: kicked.data,
     scores: scores.data,
@@ -181,14 +264,14 @@ export default function Room({ code }: { code: string }) {
     serverNow,
     onLeave: leave,
   }
-  return (
+  return frame(
     <ScreenTransition screenKey={`${meta.data.phase}-${roundNumber}`}>
       {meta.data.phase === 'PROMPT' && <PromptScreen {...game} />}
       {meta.data.phase === 'VOTE' && <VoteScreen {...game} voted={voted} />}
       {meta.data.phase === 'REVEAL' && <RevealScreen {...game} liveCounts={votes.counts} />}
       {meta.data.phase === 'SCOREBOARD' && <ScoreboardScreen {...game} />}
-      {meta.data.phase === 'FINAL_RESULTS' && <GameOver {...game} />}
-    </ScreenTransition>
+      {meta.data.phase === 'FINAL_RESULTS' && <FinalResults {...game} />}
+    </ScreenTransition>,
   )
 }
 

@@ -6,6 +6,7 @@
       "rooms": {
         "$code": {
           ".read": "auth != null",
+          ".write": "auth != null && !newData.exists() && !data.child('players').exists()",
           ".validate": "$code.matches(/^[A-HJKMNP-Z]{4}$/)",
           "meta": {
             ".write": "auth != null && newData.exists() && (data.exists() || newData.child('hostUid').val() == auth.uid)",
@@ -18,6 +19,7 @@
             "nextJoinNumber": { ".validate": "newData.isNumber() && newData.val() >= 2" },
             "roundNumber": { ".validate": "newData.isNumber() && newData.val() >= 0" },
             "lastScoredRound": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "gameBaseRound": { ".validate": "newData.isNumber() && newData.val() >= 0" },
             "$other": { ".validate": false }
           },
           "settings": {
@@ -30,7 +32,7 @@
           },
           "players": {
             "$uid": {
-              ".write": "auth != null && auth.uid == $uid",
+              ".write": "auth != null && (auth.uid == $uid || (!newData.exists() && (!data.exists() || (data.child('online').val() == false && data.child('lastSeen').val() < now - 30000))))",
               ".validate": "newData.hasChildren(['name', 'joinNumber', 'joinedAt', 'joinedRound', 'online', 'lastSeen'])",
               "name": {
                 ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
@@ -45,7 +47,7 @@
           },
           "names": {
             "$key": {
-              ".write": "auth != null && ((!data.exists() && newData.val() == auth.uid) || (data.val() == auth.uid && !newData.exists()))",
+              ".write": "auth != null && ((!data.exists() && newData.val() == auth.uid) || (!newData.exists() && (!data.exists() || data.val() == auth.uid || !newData.parent().parent().child('players').child(data.val()).exists())))",
               ".validate": "newData.isString() && $key.length <= 200"
             }
           },

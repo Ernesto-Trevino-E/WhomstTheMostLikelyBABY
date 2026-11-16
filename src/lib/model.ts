@@ -27,6 +27,8 @@ export interface RoomMeta {
   roundNumber: number
   /** Last round whose crowns were added to scores (guards double counting). */
   lastScoredRound?: number
+  /** roundNumber when the current game started (rounds are shown as roundNumber - this). */
+  gameBaseRound?: number
 }
 
 export interface RoomSettings {
