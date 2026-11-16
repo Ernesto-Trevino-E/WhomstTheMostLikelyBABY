@@ -19,6 +19,42 @@
 
 ---
 
+## [2026-11-16] Phase 2 — Firebase layer
+**Status:** done
+**Summary:** The app signs in anonymously (one player per tab) and can create and join rooms in the Realtime Database. Rooms have unique 4-letter codes, case-insensitive name locks, join numbers, live presence with a 30s grace period, derived host succession, and anonymous ballots. RTDB rules for `/whomst` are deployed. A dev-only `/#debug` screen proves it across tabs.
+**Files added/changed:** `firebase.json`, `.firebaserc`, `database.rules.json`, `src/lib/{firebase,model,roomCode,rooms,presence,votes}.ts`, `src/hooks/{useDbValue,useAuth,useServerNow,usePresence,useRoom}.ts`, `src/screens/DebugFirebase.tsx`, `src/App.tsx`
+**Data model** (`/whomst/rooms/{code}`):
+```
+meta:     { createdAt, hostUid, phase (LOBBY|PROMPT|VOTE|REVEAL|SCOREBOARD|FINAL_RESULTS),
+            nextJoinNumber, roundNumber (0 before first round), lastScoredRound }
+settings: { allowSubmissions, categories: { chill, cheeky, harsh, gotcha } }
+players/{uid}: { name, joinNumber, joinedAt, joinedRound, online, lastSeen }   // owner-only writes
+names/{nameKey}: uid       // lowercased, URI-encoded name lock; create-if-absent, owner delete
+scores/{uid}: crowns       // separate so the host can write crowns
+prompts/{pushId}: { text (ending, ≤80), key, authorUid (never shown), used, createdAt }
+drawn/{promptId}: true     // stock ids + submission ids used this cycle
+round:    { number, promptId, source (stock|player), text, startedAt, eligible/{uid}: true }
+ballots/r{round}/{pushId}: targetUid    // never linked to a voter
+voted/r{round}/{uid}: true              // written in the same update as the ballot
+```
+Round keys use an `r` prefix so RTDB never turns them into arrays. Stock prompts live in the app (Phase 3).
+**Decisions made:** vote anonymity = anonymous ballots; identity = per tab; presence/grace = `onDisconnect` + `lastSeen` + server time, with the host derived on every client and claimed by writing `meta/hostUid`; names are 1–16 chars; codes are 4 letters without I/L/O. Details are under Resolved decisions in status.md.
+**Deviations from context files:** stale rooms aren't reused when creating (a fresh code is picked instead). Rules weren't pre-validated because the MCP rules tools fail with "Invalid URL"; the deploy compiled them. See status.md.
+**Deferred / follow-ups:**
+- Deleting stale rooms, freeing names and removing records of players who left, and host-change toasts in the real UI: Phase 5.
+- Tighter rules (host-only phase changes, eligible-only votes, one ballot per write, size limits): Phase 7.
+- Leftover test room `XVJF` in RTDB.
+**How to verify:**
+- `npm run build` and `npm run lint` pass. The production bundle has no Firebase/debug code yet (debug is dev-only).
+- `npm run dev`, open http://localhost:5173/#debug in tab A and create a room as "Ana" → code shown, Ana #1 HOST.
+- Open a **new** tab (not "Duplicate") at `/#debug` and join with the code as "Bo" → both tabs list both players live.
+- Join as "ana" → NAME_TAKEN; code "XV1F" → INVALID_CODE; an unused code → ROOM_NOT_FOUND.
+- Reload Bo's tab → still #2. Close it → Ana's tab shows Bo RECONNECTING with a countdown, then LEFT after 30s.
+- Add "Cy", close the host's tab, and wait 30s → Cy becomes HOST and "stored host" updates.
+- Cast test votes → counts update; "Try double vote" is rejected. In the Firebase console, `ballots` hold only target uids.
+- Leave as the last player, then try to join that code → ROOM_NOT_FOUND.
+**Commit:** Phase 2: Firebase layer
+
 ## [2026-11-16] Planning — prompt system added to the plan
 **Status:** done (planning only, no application code changed)
 **Summary:** Defined how "Who's most likely to" prompts work: endings only, a stock deck with categories plus anonymous player submissions, player submissions drawn first, and mid-game submission from the Vote screen.

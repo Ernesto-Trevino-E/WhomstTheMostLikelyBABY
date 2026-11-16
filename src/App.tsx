@@ -8,6 +8,8 @@ import { Button } from './components/Button'
 import { Sparkle } from './components/Sparkle'
 
 const Gallery = import.meta.env.DEV ? lazy(() => import('./screens/Gallery')) : null
+// Temporary Phase 2 data-layer debug screen, dev-only like the gallery.
+const DebugFirebase = import.meta.env.DEV ? lazy(() => import('./screens/DebugFirebase')) : null
 
 function subscribeHash(onChange: () => void) {
   window.addEventListener('hashchange', onChange)
@@ -46,6 +48,7 @@ function Placeholder() {
 export default function App() {
   const hash = useSyncExternalStore(subscribeHash, getHash)
   const showGallery = Gallery !== null && hash === '#gallery'
+  const showDebug = DebugFirebase !== null && hash === '#debug'
 
   return (
     <ToastProvider>
@@ -53,6 +56,10 @@ export default function App() {
       {showGallery && Gallery ? (
         <Suspense fallback={null}>
           <Gallery />
+        </Suspense>
+      ) : showDebug && DebugFirebase ? (
+        <Suspense fallback={null}>
+          <DebugFirebase />
         </Suspense>
       ) : (
         <Placeholder />

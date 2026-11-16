@@ -1,0 +1,6 @@
+{
+  "database": {
+    "instance": "impastababy-67140-default-rtdb",
+    "rules": "database.rules.json"
+  }
+}

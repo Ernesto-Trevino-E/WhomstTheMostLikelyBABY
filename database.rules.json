@@ -1,0 +1,105 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "whomst": {
+      "rooms": {
+        "$code": {
+          ".read": "auth != null",
+          ".validate": "$code.matches(/^[A-HJKMNP-Z]{4}$/)",
+          "meta": {
+            ".write": "auth != null && newData.exists() && (data.exists() || newData.child('hostUid').val() == auth.uid)",
+            ".validate": "newData.hasChildren(['createdAt', 'hostUid', 'phase', 'nextJoinNumber', 'roundNumber'])",
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "hostUid": { ".validate": "newData.isString()" },
+            "phase": {
+              ".validate": "newData.isString() && newData.val().matches(/^(LOBBY|PROMPT|VOTE|REVEAL|SCOREBOARD|FINAL_RESULTS)$/)"
+            },
+            "nextJoinNumber": { ".validate": "newData.isNumber() && newData.val() >= 2" },
+            "roundNumber": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "lastScoredRound": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "$other": { ".validate": false }
+          },
+          "settings": {
+            ".write": "auth != null",
+            "allowSubmissions": { ".validate": "newData.isBoolean()" },
+            "categories": {
+              "$cat": { ".validate": "$cat.matches(/^(chill|cheeky|harsh|gotcha)$/) && newData.isBoolean()" }
+            },
+            "$other": { ".validate": false }
+          },
+          "players": {
+            "$uid": {
+              ".write": "auth != null && auth.uid == $uid",
+              ".validate": "newData.hasChildren(['name', 'joinNumber', 'joinedAt', 'joinedRound', 'online', 'lastSeen'])",
+              "name": {
+                ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+              },
+              "joinNumber": { ".validate": "newData.isNumber() && newData.val() >= 1" },
+              "joinedAt": { ".validate": "newData.isNumber()" },
+              "joinedRound": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+              "online": { ".validate": "newData.isBoolean()" },
+              "lastSeen": { ".validate": "newData.isNumber() && newData.val() <= now" },
+              "$other": { ".validate": false }
+            }
+          },
+          "names": {
+            "$key": {
+              ".write": "auth != null && ((!data.exists() && newData.val() == auth.uid) || (data.val() == auth.uid && !newData.exists()))",
+              ".validate": "newData.isString() && $key.length <= 200"
+            }
+          },
+          "scores": {
+            ".write": "auth != null",
+            "$uid": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+          },
+          "prompts": {
+            ".write": "auth != null",
+            "$id": {
+              ".validate": "newData.hasChildren(['text', 'key', 'authorUid', 'used', 'createdAt'])",
+              "text": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80" },
+              "key": { ".validate": "newData.isString()" },
+              "authorUid": { ".validate": "newData.isString()" },
+              "used": { ".validate": "newData.isBoolean()" },
+              "createdAt": { ".validate": "newData.isNumber()" },
+              "$other": { ".validate": false }
+            }
+          },
+          "drawn": {
+            ".write": "auth != null",
+            "$id": { ".validate": "newData.val() === true" }
+          },
+          "round": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['number', 'promptId', 'source', 'text', 'startedAt'])",
+            "number": { ".validate": "newData.isNumber()" },
+            "promptId": { ".validate": "newData.isString()" },
+            "source": { ".validate": "newData.isString() && newData.val().matches(/^(stock|player)$/)" },
+            "text": { ".validate": "newData.isString()" },
+            "startedAt": { ".validate": "newData.isNumber()" },
+            "eligible": { "$uid": { ".validate": "newData.val() === true" } },
+            "$other": { ".validate": false }
+          },
+          "voted": {
+            "$round": {
+              ".validate": "$round.matches(/^r[0-9]+$/)",
+              "$uid": {
+                ".write": "auth != null && auth.uid == $uid && !data.exists()",
+                ".validate": "newData.val() === true && newData.parent().parent().parent().child('players').child($uid).exists()"
+              }
+            }
+          },
+          "ballots": {
+            "$round": {
+              ".validate": "$round.matches(/^r[0-9]+$/)",
+              "$ballot": {
+                ".write": "auth != null && !data.exists() && !data.parent().parent().parent().child('voted').child($round).child(auth.uid).exists() && newData.parent().parent().parent().child('voted').child($round).child(auth.uid).exists()",
+                ".validate": "newData.isString() && newData.parent().parent().parent().child('players').child(newData.val()).exists()"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
