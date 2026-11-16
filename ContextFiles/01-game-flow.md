@@ -34,10 +34,14 @@ Two actions: **Create Room** and **Join Room**.
 - Non-host players see a "Waiting for host to start..." state.
 
 ### 1.5 Prompt setup
-- The game ships with a **built-in deck** of prompts.
-- Players may also **submit their own prompts** while in the lobby.
-- Submitted prompts are added to the shuffled pool for the session.
+- Every prompt is stored as **only the ending** (e.g. "fall asleep at a party"). The app always adds the fixed lead-in **"Who's most likely to"** when it shows a prompt, so players never type or see the lead-in in the deck or the submission form.
+- The game ships with a **built-in (stock) deck**. The draft list lives in `04-prompt-deck.md`. Each stock prompt has a **category**: Chill, Cheeky, Harsh or Gotcha.
+- The host **filters by category** (all on by default) in the lobby's Prompts modal. The filter applies to stock prompts only, and the host can change it between rounds.
+- Players may **submit their own prompts**, in the lobby **and during the game** (see 2, Vote phase). Submissions are anonymous (the author is never shown) and have no category, so the category filter never hides them.
+- **Draw order:** unused player-submitted prompts come first (shuffled), then stock prompts that pass the category filter (shuffled, no repeats). When everything has been used, the whole pool is reshuffled and reused.
+- Submitted prompts live only in the room and are deleted with it (nothing persists).
 - The host can toggle whether player submissions are allowed (optional).
+- Suggested limits (Claude Code confirms in plan mode): about 80 characters, trimmed, a small cap per player (about 5 waiting at once), and case-insensitive duplicates of waiting or already-used prompts are rejected.
 
 ### 1.6 Start condition
 - The host presses **Start**.
@@ -52,8 +56,8 @@ Each round has four phases:
 
 | Phase | What happens |
 |---|---|
-| **1. Prompt** | A prompt is drawn at random from the pool (no repeats until the pool is exhausted) and shown to everyone, e.g. "Who's most likely to fall asleep at a party?" |
-| **2. Vote** | Every player votes for one player in the room, **including themselves**. There is no timer. Voting ends when **everyone has voted**, or when the **host ends voting early** (players who haven't voted simply don't count). |
+| **1. Prompt** | A prompt is drawn following the draw order in 1.5 (unused player submissions first, then filtered stock prompts, no repeats until the whole pool is used) and shown to everyone as "Who's most likely to <ending>", e.g. "Who's most likely to fall asleep at a party?" |
+| **2. Vote** | Every player votes for one player in the room, **including themselves**. There is no timer. Voting ends when **everyone has voted**, or when the **host ends voting early** (players who haven't voted simply don't count). The Vote screen also has a small **Add a prompt** button: it opens a modal where any player (including one sitting out) can type an ending and submit it, then returns to voting with their selection untouched. A prompt submitted mid-round never changes the current round; it enters the pool for later draws. |
 | **3. Reveal** | Results show the **vote distribution** (how many votes each player got). Voting is **fully anonymous**: it is never shown who voted for whom. The player with the most votes is **crowned** for that round. |
 | **4. Scoreboard** | A running tally of crowns per player is shown. The **host manually advances** to the next round by pressing **Next Round** (no auto-advance). |
 
@@ -113,6 +117,12 @@ LOBBY → (host starts) → PROMPT → VOTE → REVEAL → SCOREBOARD → PROMPT
 - [x] No maximum number of players per room.
 - [x] Real-time: **Firebase** (live listeners for lobby and vote updates).
 - [x] If the host leaves or disconnects, the host role moves to another player.
+- [x] Prompts store only the ending; the app adds "Who's most likely to" (decided 2026-11-16).
+- [x] Draw order: unused player-submitted prompts first, then stock prompts, then reshuffle everything (2026-11-16).
+- [x] Stock prompts have categories (Chill, Cheeky, Harsh, Gotcha) and the host can filter them; player submissions are uncategorised and always included (2026-11-16).
+- [x] Player submissions vanish with the room; they are never saved (2026-11-16).
+- [x] Players can submit prompts in the lobby and mid-game via an "Add a prompt" button on the Vote screen (2026-11-16).
+- [x] Tone: aimed at adult friends, mostly cheeky with some harsh and "gotcha" prompts; nothing explicit (2026-11-16).
 
 ## 6. Open Questions
 - None at the moment. Remaining details (frontend framework, hosting) are tracked in `00-project-overview.md`.

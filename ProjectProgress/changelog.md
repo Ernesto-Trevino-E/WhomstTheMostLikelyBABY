@@ -19,6 +19,16 @@
 
 ---
 
+## [2026-11-16] Planning — prompt system added to the plan
+**Status:** done (planning only, no application code changed)
+**Summary:** Defined how "Who's most likely to" prompts work: endings only, a stock deck with categories plus anonymous player submissions, player submissions drawn first, and mid-game submission from the Vote screen.
+**Files added/changed:** `ContextFiles/01-game-flow.md` (1.5, Prompt and Vote phase rows, decisions), `ContextFiles/03-build-plan.md` (Phases 2, 3, 4), `ContextFiles/04-prompt-deck.md` (new draft deck), `ProjectProgress/status.md` (open and resolved decisions)
+**Decisions made:** see "Prompt system" under Resolved decisions in status.md.
+**Deviations from context files:** replaces the old rule that submitted prompts are simply added to the shuffled pool.
+**Deferred / follow-ups:** the user reviews and edits `04-prompt-deck.md`; Phase 3 turns it into `src/data/prompts.ts`.
+**How to verify:** read the files above; nothing to run.
+**Commit:** n/a
+
 ## [2026-11-15] Phase 1 — Design system
 **Status:** done
 **Summary:** Every reusable component from styling brief 4.4 is built with typed props and no Firebase: Button (4 variants), Panel (single/double, tones), PlayerChip, VoteCard, VoteBar, RoomCodeDisplay, CrownBadge, Modal, Toast (+ provider/hook), Divider, Banner, MuteToggle, Sparkle, plus a ScreenTransition wrapper and the corner background sparkles. A dev-only gallery at `/#gallery` shows every component and state at phone width.

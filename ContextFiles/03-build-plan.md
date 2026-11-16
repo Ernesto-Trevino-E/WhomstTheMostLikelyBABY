@@ -52,7 +52,7 @@ Prerequisites (user): Realtime Database created, Anonymous auth enabled (see `st
 
 Tasks
 - Initialize Firebase (modular SDK), anonymous sign-in, typed helpers.
-- Design and document the data model under `/whomst/rooms/{code}` (meta/phase/host, players with join number and presence, prompt pool, current round, votes, crown tallies). Write it down in the changelog entry.
+- Design and document the data model under `/whomst/rooms/{code}` (meta/phase/host, players with join number and presence, prompt pool, current round, votes, crown tallies). The prompt pool needs: player-submitted prompts (text = the ending only, a used flag, author id kept for limits but never shown), the host's category filter, and what has been drawn so far. Stock prompts have stable ids and live in the app, not the database. Write the model down in the changelog entry.
 - Room code generator (4–5 chars, no look-alikes such as O/0/I/1) with collision check.
 - React hooks wrapping listeners (room, players, round, votes).
 - Presence with `onDisconnect` plus the 30-second grace-period approach. **Resolve the open decisions** (clients enforce grace/host succession; vote anonymity approach) and record them in `status.md`.
@@ -68,7 +68,9 @@ Tasks
 - Landing, Create form, Join form with validation errors (room not found, name taken, invalid code).
 - Lobby: room code panel with copy/share, live player list, HOST badge, join-order numbering.
 - Host controls: Start (disabled until 4 players), optional Kick (confirm modal), Prompts modal.
-- Built-in prompt deck (a data file of a few dozen prompts) plus player-submitted prompts and optional host toggle for submissions.
+- Stock prompt deck as a typed data file (`src/data/prompts.ts`), built from `ContextFiles/04-prompt-deck.md`: stable id, category (Chill, Cheeky, Harsh, Gotcha) and the ending text only. The app adds the "Who's most likely to" lead-in.
+- Prompts modal (host): category filter (all on by default) and the optional toggle for player submissions.
+- Prompt submission form (lobby): ending only with the lead-in shown as fixed text, length limit, per-player cap and duplicate check (see `01-game-flow.md` 1.5). Submissions are anonymous and uncategorised. Reuse the same form component for the mid-game button in Phase 4.
 - Room code in the URL hash so a link can be shared.
 
 Done when: with 4+ tabs a host can create, others join, prompts can be submitted, Start unlocks at 4 players; non-hosts see "Waiting for host...".
@@ -78,8 +80,9 @@ Done when: with 4+ tabs a host can create, others join, prompts can be submitted
 
 Tasks
 - Phase machine driven by the room's `phase` field: LOBBY, PROMPT, VOTE, REVEAL, SCOREBOARD.
-- Prompt draw without repeats; reshuffle when the pool is exhausted. Resolve the Prompt-to-Vote transition decision.
+- Prompt draw per `01-game-flow.md` 1.5: unused player submissions first (shuffled), then category-filtered stock prompts (shuffled, no repeats), then reshuffle everything when the pool is used up. Copy the drawn text into the round so every device shows the same prompt. A filter change applies from the next draw. Resolve the Prompt-to-Vote transition decision.
 - Vote screen: grid, select, Lock In, waiting state with "x / n VOTED" counts only, host End Voting early.
+- "Add a prompt" button on the Vote screen (secondary, small, also available while waiting and to players sitting out): opens a Modal with the Phase 3 submission form, shows a toast on success and returns to voting without losing the selected card or the locked-in vote. A prompt submitted mid-round does not change the current round.
 - Auto-advance to Reveal when everyone eligible has voted.
 - Reveal: vote totals per player (anonymous), tie handling (all top players crowned), crown tallies updated once per round.
 - Scoreboard with Next Round (host) and End Game (host); simple placeholder transitions (animations come in Phase 6).

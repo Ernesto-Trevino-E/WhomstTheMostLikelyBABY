@@ -41,6 +41,9 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [ ] **Vote anonymity enforcement** (rules that hide votes until reveal vs. UI-only anonymity) — decide in Phase 2
 - [ ] **Prompt -> Vote transition** (host button vs. automatic short delay) — decide in Phase 4
 - [ ] **Optional features** (kick, host toggle for player prompt submissions, final-results highlights) — confirm in Phase 3 / 5
+- [ ] **Prompt submission limits** (length ~80 chars, cap ~5 waiting per player, duplicate rule) — confirm in Phase 3 plan mode
+- [ ] **Category filter scope** (host changes it in lobby and between rounds; applies to stock prompts only) — confirm in Phase 3 plan mode
+- [ ] **Review and edit the draft stock deck** `ContextFiles/04-prompt-deck.md` (user) — before Phase 3 is built
 
 ---
 
@@ -52,6 +55,7 @@ _None yet. If the build departs from anything in `ContextFiles/`, list it here w
 
 ## Resolved decisions
 
+- **Prompt system (planning, 2026-11-16):** prompts store only the ending and the app adds "Who's most likely to". Draw order is unused player submissions first, then category-filtered stock prompts, then reshuffle everything. Stock categories: Chill, Cheeky, Harsh, Gotcha (host filter; submissions are uncategorised and always included). Submissions are anonymous, live only in the room, and can be added in the lobby or mid-game via an "Add a prompt" button on the Vote screen. Tone: adult friends, mostly cheeky, nothing explicit. Details in `01-game-flow.md` 1.5, `03-build-plan.md` Phases 2-4 and `04-prompt-deck.md`.
 - **Gallery is dev-only (Phase 1, 2026-11-15):** `/#gallery` only works under `npm run dev`; the Gallery module is lazy-loaded behind `import.meta.env.DEV` and is not in the production bundle.
 - **No icon or animation libraries (Phase 1, 2026-11-15):** icons are inline SVG (`src/components/icons.tsx`), motion is CSS keyframes in `src/index.css`. Phase 6 may add a library if the reveal needs it.
 - **MuteToggle is UI-only (Phase 1, 2026-11-15):** it is a controlled component; `localStorage` persistence and real audio come in Phase 6.
