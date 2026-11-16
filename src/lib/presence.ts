@@ -42,13 +42,19 @@ export function isReconnecting(player: Player, serverNow: number): boolean {
   return !player.online && !isLeft(player, serverNow)
 }
 
-/** Players still in the room (online or within grace), sorted by join number. */
+type Kicked = Record<string, true> | null | undefined
+
+/**
+ * Players still in the room (online or within grace), sorted by join number. Kicked players
+ * never count, even before their tab has removed its own record.
+ */
 export function activePlayers(
   players: Record<string, Player> | null | undefined,
   serverNow: number,
+  kicked?: Kicked,
 ): [string, Player][] {
   return Object.entries(players ?? {})
-    .filter(([, p]) => !isLeft(p, serverNow))
+    .filter(([uid, p]) => !isLeft(p, serverNow) && !kicked?.[uid])
     .sort(([, a], [, b]) => a.joinNumber - b.joinNumber)
 }
 
@@ -56,16 +62,18 @@ export function activePlayers(
 export function effectiveHost(
   players: Record<string, Player> | null | undefined,
   serverNow: number,
+  kicked?: Kicked,
 ): string | null {
-  return activePlayers(players, serverNow)[0]?.[0] ?? null
+  return activePlayers(players, serverNow, kicked)[0]?.[0] ?? null
 }
 
 /** A room is stale (closed) when every player has left. */
 export function isRoomStale(
   players: Record<string, Player> | null | undefined,
   serverNow: number,
+  kicked?: Kicked,
 ): boolean {
-  return activePlayers(players, serverNow).length === 0
+  return activePlayers(players, serverNow, kicked).length === 0
 }
 
 /** If I am the effective host but meta says otherwise, take the host role. */
@@ -75,8 +83,9 @@ export async function claimHostIfNeeded(
   storedHostUid: string | undefined,
   players: Record<string, Player> | null | undefined,
   serverNow: number,
+  kicked?: Kicked,
 ): Promise<boolean> {
-  if (effectiveHost(players, serverNow) !== myUid || storedHostUid === myUid) return false
+  if (effectiveHost(players, serverNow, kicked) !== myUid || storedHostUid === myUid) return false
   await set(dbRef(`${paths.meta(code)}/hostUid`), myUid)
   return true
 }

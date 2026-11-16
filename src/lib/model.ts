@@ -9,6 +9,8 @@ export const GRACE_MS = 30_000
 export const MIN_PLAYERS = 4
 export const NAME_MAX = 16
 export const PROMPT_MAX = 80
+/** Max unused submissions one player can have waiting at once. */
+export const PROMPT_CAP = 5
 
 export type Phase = 'LOBBY' | 'PROMPT' | 'VOTE' | 'REVEAL' | 'SCOREBOARD' | 'FINAL_RESULTS'
 export type Category = 'chill' | 'cheeky' | 'harsh' | 'gotcha'
@@ -77,6 +79,8 @@ export interface Room {
   ballots?: Record<string, Record<string, string>>
   /** voted/r{round}/{uid} = true */
   voted?: Record<string, Record<string, true>>
+  /** kicked/{uid} = true, written by the host. The kicked tab removes its own records. */
+  kicked?: Record<string, true>
 }
 
 export const DEFAULT_SETTINGS: RoomSettings = {
@@ -94,6 +98,8 @@ export const paths = {
   name: (code: string, key: string) => `${ROOT}/${code}/names/${key}`,
   scores: (code: string) => `${ROOT}/${code}/scores`,
   round: (code: string) => `${ROOT}/${code}/round`,
+  prompts: (code: string) => `${ROOT}/${code}/prompts`,
+  kicked: (code: string) => `${ROOT}/${code}/kicked`,
   ballots: (code: string, round: number) => `${ROOT}/${code}/ballots/${roundKey(round)}`,
   voted: (code: string, round: number) => `${ROOT}/${code}/voted/${roundKey(round)}`,
 }

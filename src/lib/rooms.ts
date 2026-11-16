@@ -1,5 +1,5 @@
 // Create / join / leave a room.
-import { get, runTransaction, serverTimestamp, update } from 'firebase/database'
+import { get, runTransaction, serverTimestamp, set, update } from 'firebase/database'
 import { ensureSignedIn } from './firebase'
 import {
   DEFAULT_SETTINGS,
@@ -9,8 +9,10 @@ import {
   dbRef,
   nameKey,
   paths,
+  type Phase,
   type Player,
   type RoomMeta,
+  type RoomSettings,
 } from './model'
 import { getServerOffset, isRoomStale } from './presence'
 import { generateCode, isValidCode, normalizeCode } from './roomCode'
@@ -21,6 +23,7 @@ export type RoomErrorCode =
   | 'NAME_TAKEN'
   | 'NAME_INVALID'
   | 'CODE_EXHAUSTED'
+  | 'KICKED'
 
 const MESSAGES: Record<RoomErrorCode, string> = {
   INVALID_CODE: 'That code is not valid. Codes are 4 letters.',
@@ -28,6 +31,7 @@ const MESSAGES: Record<RoomErrorCode, string> = {
   NAME_TAKEN: 'Someone in this room already has that name.',
   NAME_INVALID: `Names are 1–${NAME_MAX} characters.`,
   CODE_EXHAUSTED: 'Could not find a free room code. Try again.',
+  KICKED: 'You were removed from this room.',
 }
 
 export class RoomError extends Error {
@@ -109,6 +113,9 @@ export async function joinRoom(rawCode: string, rawName: string): Promise<JoinRe
   if (!metaSnap.exists()) throw new RoomError('ROOM_NOT_FOUND')
   const meta = metaSnap.val() as RoomMeta
 
+  const kicked = (await get(dbRef(paths.kicked(code)))).val() as Record<string, true> | null
+  if (kicked?.[uid]) throw new RoomError('KICKED')
+
   const playersSnap = await get(dbRef(paths.players(code)))
   const players = (playersSnap.val() ?? {}) as Record<string, Player>
 
@@ -117,7 +124,7 @@ export async function joinRoom(rawCode: string, rawName: string): Promise<JoinRe
   if (existing) return { code, uid, joinNumber: existing.joinNumber, rejoined: true }
 
   const serverNow = Date.now() + (await getServerOffset())
-  if (isRoomStale(players, serverNow)) throw new RoomError('ROOM_NOT_FOUND')
+  if (isRoomStale(players, serverNow, kicked)) throw new RoomError('ROOM_NOT_FOUND')
 
   // Lock the name (case-insensitive).
   const key = nameKey(name)
@@ -158,3 +165,22 @@ export async function leaveRoom(code: string, uid: string, name: string): Promis
     [`scores/${uid}`]: null,
   })
 }
+
+/** Host only (rules check meta/hostUid). The kicked tab sees the flag and calls leaveRoom. */
+export async function kickPlayer(code: string, uid: string): Promise<void> {
+  await set(dbRef(`${paths.kicked(code)}/${uid}`), true)
+}
+
+export async function updateSettings(code: string, patch: Partial<RoomSettings>): Promise<void> {
+  const flat: Record<string, unknown> = {}
+  if (patch.allowSubmissions !== undefined) flat.allowSubmissions = patch.allowSubmissions
+  for (const [cat, on] of Object.entries(patch.categories ?? {})) flat[`categories/${cat}`] = on
+  await update(dbRef(paths.settings(code)), flat)
+}
+
+export async function setPhase(code: string, phase: Phase): Promise<void> {
+  await set(dbRef(`${paths.meta(code)}/phase`), phase)
+}
+
+/** Host presses Start. Phase 4 replaces this with the first prompt draw. */
+export const startGame = (code: string) => setPhase(code, 'PROMPT')

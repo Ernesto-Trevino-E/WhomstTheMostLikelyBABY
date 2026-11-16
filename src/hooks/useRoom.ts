@@ -1,6 +1,13 @@
 // Live room listeners, one per subtree so screens only re-render on what they use.
 import { useMemo } from 'react'
-import { paths, type Player, type Round, type RoomMeta, type RoomSettings } from '../lib/model'
+import {
+  paths,
+  type Player,
+  type Round,
+  type RoomMeta,
+  type RoomSettings,
+  type SubmittedPrompt,
+} from '../lib/model'
 import { tally } from '../lib/votes'
 import { useDbValue } from './useDbValue'
 
@@ -15,6 +22,12 @@ export const usePlayers = (code: string | null) =>
 
 export const useScores = (code: string | null) =>
   useDbValue<Record<string, number>>(code ? paths.scores(code) : null)
+
+export const usePrompts = (code: string | null) =>
+  useDbValue<Record<string, SubmittedPrompt>>(code ? paths.prompts(code) : null)
+
+export const useKicked = (code: string | null) =>
+  useDbValue<Record<string, true>>(code ? paths.kicked(code) : null)
 
 export const useRound = (code: string | null) =>
   useDbValue<Round>(code ? paths.round(code) : null)

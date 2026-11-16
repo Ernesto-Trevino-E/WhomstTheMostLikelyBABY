@@ -16,6 +16,8 @@ import { MuteToggle } from '../components/MuteToggle'
 import { Sparkle } from '../components/Sparkle'
 import { ScreenTransition } from '../components/ScreenTransition'
 import { KickIcon } from '../components/icons'
+import { TextField } from '../components/TextField'
+import { Switch } from '../components/Switch'
 import { useToast } from '../hooks/useToast'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { PLAYER_COLORS, initials, playerColor } from '../lib/players'
@@ -56,6 +58,7 @@ export default function Gallery() {
   const [modal, setModal] = useState<null | 'prompts' | 'kick' | 'lobby'>(null)
   const [replay, setReplay] = useState(0)
   const [bars, setBars] = useState([5, 5, 3, 1, 0])
+  const [switchOn, setSwitchOn] = useState(true)
 
   return (
     <main className="mx-auto flex w-full max-w-[480px] flex-col gap-10 px-4 py-8">
@@ -252,6 +255,17 @@ export default function Gallery() {
         <Divider tone="slate" style="dashed" />
         <Divider label="Players (5)" />
         <Divider label="Slate label" tone="slate" style="dashed" />
+      </Section>
+
+      <Section title="TextField">
+        <TextField label="Your name" placeholder="What should everyone call you?" hint="Up to 16 characters." />
+        <TextField label="Room code" code placeholder="ABCD" defaultValue="XVJF" />
+        <TextField label="Your name" defaultValue="Ana" error="Someone in this room already has that name." />
+      </Section>
+
+      <Section title="Switch">
+        <Switch label="Cheeky" detail="Embarrassing, flirty, chaotic · 30" checked={switchOn} onChange={setSwitchOn} />
+        <Switch label="Locked" detail="Disabled state" checked disabled onChange={() => {}} />
       </Section>
 
       <Section title="Banner">

@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-16
-**Current phase:** Phase 3 — Pre-game (NOT STARTED)
-**Next action:** Review/edit the draft stock deck `ContextFiles/04-prompt-deck.md`, then start a new session, enter plan mode and plan Phase 3.
+**Current phase:** Phase 4 — Core game loop (NOT STARTED)
+**Next action:** Verify Phase 3 (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 4.
 
 ---
 
@@ -17,7 +17,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] **Phase 0** — Scaffold: Vite + React + TS, Tailwind v4 theme, fonts, env files
 - [x] **Phase 1** — Design system: reusable components + dev gallery
 - [x] **Phase 2** — Firebase layer: auth, data model, room codes, hooks, presence, first rules
-- [ ] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
+- [x] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
 - [ ] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
 - [ ] **Phase 5** — Edge cases and room lifecycle
 - [ ] **Phase 6** — Polish: animations, sound, haptics
@@ -38,14 +38,13 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 ## Open decisions (resolve in the phase noted, then record the answer here and in the changelog)
 
 - [ ] **Prompt -> Vote transition** (host button vs. automatic short delay) — decide in Phase 4
-- [ ] **Optional features** (kick, host toggle for player prompt submissions, final-results highlights) — confirm in Phase 3 / 5
-- [ ] **Prompt submission limits** (length ~80 chars, cap ~5 waiting per player, duplicate rule) — confirm in Phase 3 plan mode
-- [ ] **Category filter scope** (host changes it in lobby and between rounds; applies to stock prompts only) — confirm in Phase 3 plan mode
-- [ ] **Review and edit the draft stock deck** `ContextFiles/04-prompt-deck.md` (user) — before Phase 3 is built
+- [ ] **Final-results highlights** (optional) — confirm in Phase 5
 
 ---
 
 ## Deviations from the context files
+
+- **Start is temporary (Phase 3):** Start sets `meta/phase = PROMPT` and shows a "Game started" placeholder with a host-only Back to lobby, until Phase 4 builds the loop.
 
 - **Stale rooms are not reused for new codes (Phase 2):** the plan said a create could take over a stale room's code. Rules don't allow deleting a room yet, so `createRoom` just picks another code (279k codes). Revisit with room cleanup in Phase 5.
 - **Rules were not pre-validated (Phase 2):** the Firebase MCP's `validate_security_rules` and `get_security_rules` fail with "Invalid URL" for RTDB. Current rules were read through `realtimedatabase_get_data` on `/.settings/rules`, and the deploy itself compiled the rules (it succeeded).
@@ -53,6 +52,13 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 ---
 
 ## Resolved decisions
+
+- **Stock deck (Phase 3, 2026-11-16, user):** the draft `04-prompt-deck.md` is used as-is (82 prompts: 15 Chill, 30 Cheeky, 17 Harsh, 20 Gotcha) in `src/data/prompts.ts`. Ids are `{category}-{nnn}` and stable: never renumber, only append.
+- **Kick (Phase 3, 2026-11-16, user):** included. The host writes `kicked/{uid} = true` (rules: only the room's `meta/hostUid`); the kicked tab removes its own player, name lock and score, then goes home. The same tab can't rejoin (KICKED). Kicked players never count as active or as host.
+- **Prompt submission limits (Phase 3, 2026-11-16, user):** ending only, ≤ 80 chars after cleanup (trim, collapse spaces, strip a pasted "Who's most likely to" and trailing ?.!, lowercase a capitalised first word); max 5 unused submissions per player; case-insensitive duplicates rejected against waiting, used and stock prompts. Client-enforced; rules cap length at 80.
+- **Submissions toggle (Phase 3, 2026-11-16, user):** included in the host Prompts modal (default on). Off disables the Add-a-prompt form; existing submissions stay in the pool.
+- **Category filter scope (Phase 3, 2026-11-16):** host changes it in the lobby Prompts modal (Phase 4 adds it between rounds); stock prompts only; at least one category always stays on.
+- **Routing (Phase 3, 2026-11-16):** hash routes `#/` landing, `#/create`, `#/join`, `#/ABCD` room. Opening a room link as a non-member shows Join with the code filled in; reloading as a member returns to the room.
 
 - **Vote anonymity (Phase 2, 2026-11-16, user):** anonymous ballots. A vote is one multi-path write of `ballots/r{round}/{pushId} = targetUid` plus `voted/r{round}/{uid} = true`; rules only accept a ballot when the voter's `voted` flag is new in the same write. The DB never links voter to target. Known limits for Phase 7: someone watching live could guess from timing, and one write could carry two ballots.
 - **Identity (Phase 2, 2026-11-16, user):** per tab. Anonymous auth uses session persistence: reloading a tab keeps the player; a new tab is a new player. (Duplicating a tab copies its session, so testers should open new tabs instead.)
@@ -71,7 +77,8 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 ## Blockers / notes
 
 - No blockers.
-- RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only). Room `XVJF` is leftover Phase 2 test data (all players left); it can be removed with Phase 5 cleanup.
+- RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only); Phase 3 added the host-only `kicked` node. Rooms `XVJF` (Phase 2) and `RWRD` (Phase 3) are leftover test data; remove them with Phase 5 cleanup.
+- `/#debug` (Phase 2 debug screen) is still in the dev build; remove it once Phase 4 no longer needs it.
 - A player's name lock stays with them after they drop out without pressing Leave. Phase 5 should free names (and remove player records) for players who have left.
 - Player color p9 (`#8FBFB0`) is the same as `sage` (HOST badge, info). A p9 player who is host has a sage avatar next to a sage badge. Kept as the brief says; consider changing p9 later.
 - npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.

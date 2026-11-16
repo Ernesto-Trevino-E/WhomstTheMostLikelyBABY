@@ -19,6 +19,31 @@
 
 ---
 
+## [2026-11-16] Phase 3 — Pre-game
+**Status:** done
+**Summary:** The real app now runs from landing to lobby on the live database. Players can create a room, or join one by code or shared link (`#/ABCD`), with errors shown under the field they belong to. The lobby updates live with join numbers, HOST/YOU/RECONNECTING badges, copy/share, host kick (with confirm), a host Prompts modal (category filter and submissions toggle), and anonymous "Add a prompt" for everyone. Start unlocks at 4 active players; non-hosts see "Waiting for host...". The 82-prompt stock deck is in `src/data/prompts.ts`.
+**Files added/changed:** `src/data/prompts.ts`, `src/lib/{prompts,model,rooms,presence}.ts`, `src/hooks/{useHashRoute,useRoom}.ts`, `src/components/{TextField,Switch,Screen,PromptSubmitForm,PromptsModal}.tsx`, `src/screens/{Landing,CreateRoom,JoinRoom,Room,Lobby}.tsx`, `src/screens/Gallery.tsx` (TextField + Switch sections), `src/App.tsx`, `database.rules.json` (deployed)
+**Data model additions:** `kicked/{uid}: true` (host-only write). `prompts/{pushId}` is now written by the submit form.
+**Decisions made:** deck used as-is; kick included with a rules deploy; submission limits 80 chars / 5 waiting per player / duplicates vs waiting, used and stock; submissions toggle included; at least one category stays on; hash routing. Details are under Resolved decisions in status.md.
+**Deviations from context files:** Start sets `phase = PROMPT` and shows a temporary "Game started" panel with a host-only Back to lobby until Phase 4.
+**Deferred / follow-ups:**
+- Phase 4: replace the Start placeholder with the first draw; reuse `PromptSubmitForm` in the Vote screen modal; let the host open the Prompts modal between rounds.
+- Phase 5: remove leftover test rooms `XVJF` and `RWRD`; free names of players who left without pressing Leave.
+- Remove the dev-only `/#debug` screen when it's no longer useful.
+- The host-change toast ran in code but was not caught on screen during testing (it lasts 3s); worth a look when verifying.
+**How to verify:**
+- `npm run build` and `npm run lint` pass. The production bundle has no gallery/debug code.
+- `npm run dev`, open http://localhost:5173 → Create Room as "Ana" → URL becomes `#/XXXX`, lobby shows Ana #1 HOST/YOU, Start disabled with "Need 4 players (1 / 4)".
+- In **new** tabs (not Duplicate), open the room link → Join form with the code filled in. Try "ana" → "Someone in this room already has that name." under the name. On `#/join`, code "XV1F" → invalid code; an unused code → "No open room with that code."
+- Join as Bo, Cy, Di → every tab updates live; at 4 players Start enables for Ana only; others see "Waiting for host...".
+- Reload Bo's tab → still #2 in the lobby.
+- Add a prompt: "Who's most likely to Fall asleep at a party?" → "That prompt is already in the deck." A new one → toast, "1 player prompt waiting" on every tab. A 6th waiting prompt from the same player → cap message. In the Firebase console, `prompts` hold only the ending.
+- Host → Prompts: turn off three categories → the last one locks. Turn off player prompts → other tabs show "player prompts are off" and their form is disabled. Turn everything back on.
+- Host kicks Di (confirm) → Di's tab goes home with "You were removed from this room."; Start locks again; Di's name is free (a new tab can join as Di, with a new number).
+- Start → every tab shows "Game started"; the host's Back to lobby returns everyone.
+- Close the host's tab and wait ~30s → Ana shows RECONNECTING, then disappears; Bo becomes HOST and gets the controls.
+**Commit:** Phase 3: Pre-game
+
 ## [2026-11-16] Phase 2 — Firebase layer
 **Status:** done
 **Summary:** The app signs in anonymously (one player per tab) and can create and join rooms in the Realtime Database. Rooms have unique 4-letter codes, case-insensitive name locks, join numbers, live presence with a 30s grace period, derived host succession, and anonymous ballots. RTDB rules for `/whomst` are deployed. A dev-only `/#debug` screen proves it across tabs.

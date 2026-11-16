@@ -80,6 +80,12 @@
             "eligible": { "$uid": { ".validate": "newData.val() === true" } },
             "$other": { ".validate": false }
           },
+          "kicked": {
+            "$uid": {
+              ".write": "auth != null && data.parent().parent().child('meta').child('hostUid').val() == auth.uid",
+              ".validate": "newData.val() === true"
+            }
+          },
           "voted": {
             "$round": {
               ".validate": "$round.matches(/^r[0-9]+$/)",
