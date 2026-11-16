@@ -1,42 +1,62 @@
-// Phase 0 placeholder screen: proves the theme tokens and the three fonts load.
-// Replaced by the real screens in Phase 1 (gallery) and Phase 3 (landing).
+// Placeholder home screen until the real screens arrive in Phase 3.
+// In dev, /#gallery shows the component gallery (excluded from production builds).
+import { lazy, Suspense, useSyncExternalStore } from 'react'
+import { ToastProvider } from './components/ToastProvider'
+import { BackgroundSparkles } from './components/BackgroundSparkles'
+import { Panel } from './components/Panel'
+import { Button } from './components/Button'
+import { Sparkle } from './components/Sparkle'
 
-const swatches = [
-  { name: 'panel', className: 'bg-panel' },
-  { name: 'slate', className: 'bg-slate' },
-  { name: 'cream', className: 'bg-cream' },
-  { name: 'orange', className: 'bg-orange' },
-  { name: 'red', className: 'bg-red' },
-  { name: 'sage', className: 'bg-sage' },
-]
+const Gallery = import.meta.env.DEV ? lazy(() => import('./screens/Gallery')) : null
 
-export default function App() {
+function subscribeHash(onChange: () => void) {
+  window.addEventListener('hashchange', onChange)
+  return () => window.removeEventListener('hashchange', onChange)
+}
+const getHash = () => window.location.hash
+
+function Placeholder() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-8 px-4 py-12 text-center">
-      <h1 className="font-display text-4xl leading-tight font-black tracking-wide uppercase sm:text-5xl">
+      <h1 className="relative font-display text-4xl leading-tight font-black tracking-wide uppercase sm:text-5xl">
         Whomst the most?
+        <Sparkle size={22} color="var(--color-orange)" className="absolute -top-3 -right-2" />
       </h1>
-
       <p className="text-base text-cream/60">
         Who's most likely to... find out with friends. The game is coming soon.
       </p>
-
-      <div className="w-full rounded-panel border-2 border-slate bg-panel p-4 sm:p-6">
+      <Panel variant="double" className="w-full">
         <p className="font-display text-xs font-bold tracking-[0.2em] text-sage uppercase">
           Room code
         </p>
-        <p className="mt-2 font-mono text-5xl font-bold tracking-[0.3em]">WHMS</p>
+        <p className="mt-2 pl-[0.3em] font-mono text-5xl font-bold tracking-[0.3em]">WHMS</p>
+      </Panel>
+      <div className="flex w-full flex-col gap-3">
+        <Button fullWidth disabled>
+          Create Room
+        </Button>
+        <Button variant="secondary" fullWidth disabled>
+          Join Room
+        </Button>
       </div>
-
-      <ul className="flex flex-wrap justify-center gap-2" aria-label="Theme colors">
-        {swatches.map((s) => (
-          <li
-            key={s.name}
-            title={s.name}
-            className={`size-8 rounded-pill border-2 border-cream/20 ${s.className}`}
-          />
-        ))}
-      </ul>
     </main>
+  )
+}
+
+export default function App() {
+  const hash = useSyncExternalStore(subscribeHash, getHash)
+  const showGallery = Gallery !== null && hash === '#gallery'
+
+  return (
+    <ToastProvider>
+      <BackgroundSparkles />
+      {showGallery && Gallery ? (
+        <Suspense fallback={null}>
+          <Gallery />
+        </Suspense>
+      ) : (
+        <Placeholder />
+      )}
+    </ToastProvider>
   )
 }

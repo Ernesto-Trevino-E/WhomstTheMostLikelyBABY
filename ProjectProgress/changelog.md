@@ -19,6 +19,28 @@
 
 ---
 
+## [2026-11-15] Phase 1 — Design system
+**Status:** done
+**Summary:** Every reusable component from styling brief 4.4 is built with typed props and no Firebase: Button (4 variants), Panel (single/double, tones), PlayerChip, VoteCard, VoteBar, RoomCodeDisplay, CrownBadge, Modal, Toast (+ provider/hook), Divider, Banner, MuteToggle, Sparkle, plus a ScreenTransition wrapper and the corner background sparkles. A dev-only gallery at `/#gallery` shows every component and state at phone width.
+**Files added/changed:** `src/components/*` (Button, Panel, PlayerChip, VoteCard, VoteBar, RoomCodeDisplay, CrownBadge, Modal, Toast, ToastProvider, Divider, Banner, MuteToggle, Sparkle, ScreenTransition, BackgroundSparkles, icons), `src/lib/{players,cn,toastContext}.ts`, `src/hooks/{usePrefersReducedMotion,useToast}.ts`, `src/screens/Gallery.tsx`, `src/App.tsx`, `src/index.css`
+**Decisions made:**
+- Gallery is dev-only (lazy import behind `import.meta.env.DEV`); production shows the placeholder.
+- No new dependencies: inline SVG icons, CSS keyframes, native `<dialog>` for Modal (focus trap, Esc, backdrop).
+- `playerColor(joinNumber)` cycles the 10 colors by 1-based join number; `initials(name)` takes first + last word letters, skips emoji-only words, falls back to "?".
+- The double-border panel uses an inner `::before` line, not a shadow. Only glow shadows (gold/orange/red tokens) are used; avatar rings use Tailwind `ring`.
+**Deviations from context files:** none
+**Deferred / follow-ups:**
+- MuteToggle persistence and sounds — Phase 6.
+- Reveal sequencing (bar count-up, crown drop, confetti) — Phase 6; VoteBar has only a plain width transition now.
+- Player color p9 equals `sage` (noted in status.md).
+**How to verify:**
+- `npm run dev`, open http://localhost:5173/#gallery, DevTools at 375px: every section (Button, Panel, PlayerChip, Player colors, VoteCard, VoteBar, RoomCodeDisplay, CrownBadge, Modal, Toast, Divider, Banner, Waiting row, Sparkle, ScreenTransition) renders with no horizontal scroll.
+- Tap VoteCards (orange outline moves), Copy on the room code (shows "Copied!"), fire info/error toasts (gone after 3s), open each modal and close it with Esc / backdrop / buttons, Randomize the VoteBars (ties crown every top row), Replay the transition.
+- DevTools → Rendering → `prefers-reduced-motion: reduce`: the gallery header says "Reduced motion: on" and Replay is instant.
+- Gold only appears on the gold Panel sample, crowned PlayerChips, crowned VoteBars and CrownBadges.
+- `npm run build` and `npm run lint` pass. `npm run build && npm run preview`, then `/#gallery` shows the placeholder, not the gallery.
+**Commit:** Phase 1: Design system
+
 ## [2026-11-15] Phase 0 — Scaffold
 **Status:** done
 **Summary:** The app is a Vite 8 + React 19 + TypeScript project with Tailwind v4 and the full `@theme` from the styling brief. It has self-hosted Orbitron, Space Grotesk and JetBrains Mono, and a dark dot-grid background. A placeholder screen shows the wordmark, a room code panel and palette swatches. The Firebase SDK is installed but not initialized yet.

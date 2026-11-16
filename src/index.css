@@ -58,6 +58,87 @@
   }
 }
 
+/* Textures: low-contrast so they never compete with text */
+@utility texture-halftone {
+  background-image: radial-gradient(circle, rgb(14 11 30 / 0.14) 1px, transparent 1.5px);
+  background-size: 6px 6px;
+}
+
+@utility texture-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(244 219 148 / 0.08) 0 4px,
+    transparent 4px 10px
+  );
+}
+
+/* Motion */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes signal-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-screen-in {
+  animation: screen-in 180ms ease-out both;
+}
+
+@utility animate-pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@utility animate-signal {
+  animation: signal-pulse 1s ease-in-out infinite;
+}
+
+@utility animate-toast-in {
+  animation: toast-in 180ms ease-out both;
+}
+
+/* Native dialog backdrop for Modal */
+dialog::backdrop {
+  background-color: rgb(14 11 30 / 0.8);
+}
+
 /* Respect reduced motion globally: animations and transitions become instant */
 @media (prefers-reduced-motion: reduce) {
   *,

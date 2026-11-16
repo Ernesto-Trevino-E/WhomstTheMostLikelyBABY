@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-15
-**Current phase:** Phase 1 — Design system (NOT STARTED)
-**Next action:** Enter plan mode, read the context files, and plan Phase 1.
+**Current phase:** Phase 2 — Firebase layer (NOT STARTED)
+**Next action:** Do the two Firebase manual steps below (RTDB check/create, Anonymous auth), then enter plan mode and plan Phase 2.
 
 ---
 
@@ -15,7 +15,7 @@
 Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committed
 
 - [x] **Phase 0** — Scaffold: Vite + React + TS, Tailwind v4 theme, fonts, env files
-- [ ] **Phase 1** — Design system: reusable components + dev gallery
+- [x] **Phase 1** — Design system: reusable components + dev gallery
 - [ ] **Phase 2** — Firebase layer: auth, data model, room codes, hooks, presence, first rules
 - [ ] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
 - [ ] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
@@ -52,6 +52,10 @@ _None yet. If the build departs from anything in `ContextFiles/`, list it here w
 
 ## Resolved decisions
 
+- **Gallery is dev-only (Phase 1, 2026-11-15):** `/#gallery` only works under `npm run dev`; the Gallery module is lazy-loaded behind `import.meta.env.DEV` and is not in the production bundle.
+- **No icon or animation libraries (Phase 1, 2026-11-15):** icons are inline SVG (`src/components/icons.tsx`), motion is CSS keyframes in `src/index.css`. Phase 6 may add a library if the reveal needs it.
+- **MuteToggle is UI-only (Phase 1, 2026-11-15):** it is a controlled component; `localStorage` persistence and real audio come in Phase 6.
+- **Initials rule (Phase 1, 2026-11-15):** first letter of the first and last word (ignoring emoji-only words); a single word gives its first two letters; empty gives "?".
 - **Firebase web app (Phase 0, 2026-11-15):** registered a separate web app `whomst-web` in the ImpastaBABY project, so the other game's `impasta-web` app is untouched. Its config is in `.env.local` (gitignored).
 
 ---
@@ -59,5 +63,6 @@ _None yet. If the build departs from anything in `ContextFiles/`, list it here w
 ## Blockers / notes
 
 - No blockers.
+- Player color p9 (`#8FBFB0`) is the same as `sage` (HOST badge, info). A p9 player who is host has a sage avatar next to a sage badge. Kept as the brief says; consider changing p9 later.
 - npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.
 - Linting uses **oxlint** (create-vite's current default), not ESLint. Run it with `npm run lint`. Typecheck runs as part of `npm run build` (`tsc -b`).
