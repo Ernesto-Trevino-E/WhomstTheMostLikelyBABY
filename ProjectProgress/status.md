@@ -28,7 +28,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 ## Manual steps for the user (Claude Code cannot do these)
 
 - [ ] Create the Realtime Database in the Firebase console (choose region, locked mode) — needed before Phase 2. **Check first:** the `whomst-web` SDK config already returns a `databaseURL` (`impastababy-67140-default-rtdb`), so a default RTDB may already exist. Confirm in the console whether it exists and whether the other game uses it.
-- [ ] Enable **Anonymous** sign-in under Authentication — needed before Phase 2
+- [x] Enable **Anonymous** sign-in under Authentication — needed before Phase 2 (done by user 2026-11-15)
 - [ ] Choose the Cloudflare deploy method (wrangler CLI vs GitHub auto-deploy) — needed before Phase 7
 - [ ] Add the deployed Cloudflare domain to Firebase Authorized domains — Phase 7
 - [ ] If building on Cloudflare from GitHub: set `VITE_FIREBASE_*` as build variables in the Cloudflare dashboard — Phase 7
