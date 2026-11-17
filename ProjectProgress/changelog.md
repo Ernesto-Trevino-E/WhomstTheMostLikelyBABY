@@ -20,7 +20,7 @@
 ---
 
 ## [2026-11-17] Phase 7 — Hardening, deploy, QA
-**Status:** partial: rules, Cloudflare config, bundle split, QA and README are done and committed; the live deploy (push, connect the repo to the Worker, build variables, Firebase authorized domain) is being finished in the same session.
+**Status:** done. Live at https://whomst.e-trevino8299.workers.dev (adding the domain to Firebase Authorized domains is left to the user).
 **Summary:** The Realtime Database rules are locked down and deployed: only the room's host can change the phase, round, settings, prompt draw, kicks and scores; players write only their own records; votes are accepted only during VOTE, for the current round, from and for eligible players; no junk nodes; size limits on ids and round text. A join can no longer land in a room the last Leave just deleted. The app is set up as a Cloudflare Worker (`whomst`) serving `dist/` with a single-page-app fallback, Firebase is split into its own chunk, and the README explains setup and deploy.
 **Files added/changed:** `database.rules.json` (deployed), `src/lib/rooms.ts` (join maps permission errors to "room not found"), `src/lib/game.ts` (score reset written per player), new `wrangler.jsonc`, `vite.config.ts` (Firebase chunk), `package.json`/lockfile (wrangler 4.156.2, pinned), `README.md`, `.claude/launch.json` (preview config).
 **Decisions made:** Workers static assets, Worker name `whomst` (user); Claude drives the Cloudflare dashboard in the user's Chrome and the user pastes the Firebase values (user). Host claim and the two-ballot limit are under Deviations in status.md.
@@ -31,7 +31,9 @@
 **How to verify:**
 - `npm run build` (no chunk-size warning) and `npm run lint` pass; `npx wrangler deploy --dry-run` reads `dist`.
 - Firebase console → Realtime Database → Rules shows the new rules (host checks on `meta`, `settings`, `round`, `drawn`, `scores`).
-- Live: open `https://whomst.<account>.workers.dev` on 4 phones/tabs, play a few rounds with a tie, End Game, Play Again, kick, Leave. `/anything` and a room link load the app.
+- Deploy: Cloudflare Worker `whomst` connected to GitHub `main` (every push redeploys). The first build ran before the build variables existed; a retried build with all 7 deployed version `6d7d386a`.
+- Checked live (Chrome): `/some/unknown/path` loads the app (SPA fallback); Create Room as "QA Bot" → lobby `VKDF`; reloading `#/VKDF` keeps the player; Leave after 30s deleted the room (`/whomst` empty).
+- Live: open `https://whomst.e-trevino8299.workers.dev` on 4 phones/tabs, play a few rounds with a tie, End Game, Play Again, kick, Leave. `/anything` and a room link load the app.
 - Checked in this session (dev server on the live database, 4 new tabs, room NJAS): from a non-host tab, writes to `meta/phase`, `settings`, another player's score, own score ≠ 0, `round`, `drawn`, `kicked`, `meta/hostUid`, a junk node, a vote in LOBBY, a prompt with someone else's author id or `used: true` were all PERMISSION_DENIED. Votes for an old round, for a non-eligible uid and a second vote were denied; the valid vote passed. UI flow worked end to end: prompt submit, host settings, Start, Start voting, auto-reveal on a 2–2 tie, Scores, Next Round, End Voting with no votes, End Game, Play Again (scores reset to 0), kick (the kicked tab can't rejoin, even with a direct write), below-4 return to lobby, host Leave → Bo claimed host and could change settings, last Leave deleted the room. Name lock, player record and join-number writes into a deleted room were denied. Lobby fits 320px with no horizontal scroll. The production build boots with the split chunks. `/whomst` was empty afterwards.
 **Commit:** Phase 7: Hardening, deploy, QA
 

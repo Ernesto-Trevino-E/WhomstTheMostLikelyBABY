@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-17
-**Current phase:** Phase 7 — Hardening, deploy to Cloudflare, QA (code committed; deploy in progress)
-**Next action:** Finish the Cloudflare setup (push `main`, connect the repo to the `whomst` Worker, build variables, Firebase authorized domain), then play a game on the live URL with real phones.
+**Current phase:** All build-plan phases done (Phase 7 complete). Live at **https://whomst.e-trevino8299.workers.dev**
+**Next action:** Add the live domain to Firebase Authorized domains (if not done yet), then play a real game on phones and note any fixes or tuning (sound volumes, vibration, p9 color).
 
 ---
 
@@ -21,7 +21,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
 - [x] **Phase 5** — Edge cases and room lifecycle
 - [x] **Phase 6** — Polish: animations, sound, haptics
-- [~] **Phase 7** — Hardening, deploy to Cloudflare, QA (rules, config, QA and README done; live deploy pending)
+- [x] **Phase 7** — Hardening, deploy to Cloudflare, QA
 
 ---
 
@@ -31,9 +31,9 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] Enable **Anonymous** sign-in under Authentication — needed before Phase 2 (done by user 2026-11-15)
 - [x] Choose the Cloudflare deploy method — **GitHub auto-deploy** (user, 2026-11-17). See "Deploy target" below.
 - [x] Sign in to Cloudflare and let it deploy from the user's GitHub repos — done by user 2026-11-17 (signed in in their Chrome, Cloudflare's GitHub access granted).
-- [ ] Connect the repo in the Cloudflare dashboard (build settings below) — Phase 7
-- [ ] Set `VITE_FIREBASE_*` as build variables in the Cloudflare dashboard (same values as `.env.local`) — Phase 7
-- [ ] Add the deployed Cloudflare domain to Firebase Authorized domains — Phase 7
+- [x] Connect the repo in the Cloudflare dashboard — done 2026-11-17 (Claude in the user's Chrome, with OK): Worker `whomst`, build `npm run build`, deploy `npx wrangler deploy`, branch `main`, auto-created "whomst build token".
+- [x] Set the 7 `VITE_FIREBASE_*` build variables — names added by Claude, values pasted by the user (2026-11-17).
+- [ ] Add `whomst.e-trevino8299.workers.dev` to Firebase Authentication → Settings → Authorized domains — user. (Anonymous sign-in already works on the live site without it; add it anyway per the overview.)
 
 ### Deploy target (for Phase 7)
 - **Repo:** GitHub `Ernesto-Trevino-E/WhomstTheMostLikelyBABY` (the `origin` remote), production branch `main`. Every push to `main` will redeploy once connected.
