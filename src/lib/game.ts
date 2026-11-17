@@ -147,7 +147,8 @@ export async function drawNextRound(code: string): Promise<boolean> {
   if (pick.reshuffle) writes.drawn = { [pick.id]: true }
   else writes[`drawn/${pick.id}`] = true
   if (pick.source === 'player' && prompts?.[pick.id]) writes[`prompts/${pick.id}/used`] = true
-  if (fresh) writes.scores = Object.fromEntries(Object.keys(players ?? {}).map((uid) => [uid, 0]))
+  // Per-player paths: the rules grant score writes at scores/{uid}, not at scores.
+  if (fresh) for (const uid of Object.keys(players ?? {})) writes[`scores/${uid}`] = 0
   await update(dbRef(paths.room(code)), writes)
   return true
 }

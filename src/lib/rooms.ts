@@ -137,6 +137,27 @@ export async function joinRoom(rawCode: string, rawName: string): Promise<JoinRe
     throw new RoomError('ROOM_NOT_FOUND')
   }
 
+  try {
+    return await takeSeat(code, uid, name, meta.roundNumber ?? 0)
+  } catch (err) {
+    // The rules reject these writes once the room is deleted (e.g. the last player left a
+    // moment ago), so a permission error here means the room is gone.
+    if (isPermissionDenied(err)) throw new RoomError('ROOM_NOT_FOUND')
+    throw err
+  }
+}
+
+const isPermissionDenied = (err: unknown) =>
+  err instanceof Error &&
+  /permission[_ ]denied/i.test(`${(err as { code?: string }).code ?? ''} ${err.message}`)
+
+/** Name lock, join number and player record for a new player in an existing room. */
+async function takeSeat(
+  code: string,
+  uid: string,
+  name: string,
+  joinedRound: number,
+): Promise<JoinResult> {
   // Lock the name (case-insensitive).
   const key = nameKey(name)
   const nameRes = await runTransaction(
@@ -159,7 +180,7 @@ export async function joinRoom(rawCode: string, rawName: string): Promise<JoinRe
       name,
       joinNumber,
       joinedAt: serverTimestamp(),
-      joinedRound: meta.roundNumber ?? 0,
+      joinedRound,
       online: true,
       lastSeen: serverTimestamp(),
     },

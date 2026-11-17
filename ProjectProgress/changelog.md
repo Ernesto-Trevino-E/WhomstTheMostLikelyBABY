@@ -19,6 +19,22 @@
 
 ---
 
+## [2026-11-17] Phase 7 — Hardening, deploy, QA
+**Status:** partial: rules, Cloudflare config, bundle split, QA and README are done and committed; the live deploy (push, connect the repo to the Worker, build variables, Firebase authorized domain) is being finished in the same session.
+**Summary:** The Realtime Database rules are locked down and deployed: only the room's host can change the phase, round, settings, prompt draw, kicks and scores; players write only their own records; votes are accepted only during VOTE, for the current round, from and for eligible players; no junk nodes; size limits on ids and round text. A join can no longer land in a room the last Leave just deleted. The app is set up as a Cloudflare Worker (`whomst`) serving `dist/` with a single-page-app fallback, Firebase is split into its own chunk, and the README explains setup and deploy.
+**Files added/changed:** `database.rules.json` (deployed), `src/lib/rooms.ts` (join maps permission errors to "room not found"), `src/lib/game.ts` (score reset written per player), new `wrangler.jsonc`, `vite.config.ts` (Firebase chunk), `package.json`/lockfile (wrangler 4.156.2, pinned), `README.md`, `.claude/launch.json` (preview config).
+**Decisions made:** Workers static assets, Worker name `whomst` (user); Claude drives the Cloudflare dashboard in the user's Chrome and the user pastes the Firebase values (user). Host claim and the two-ballot limit are under Deviations in status.md.
+**Deviations from context files:** host claim rule can't check "lowest join number" (see status.md); a hand-crafted write could still carry two ballots (rules can't count them without linking voter to ballot).
+**Deferred / follow-ups:**
+- If the host tab dies between VOTE→REVEAL and the tally write, that round has no crowns (rare, accepted).
+- Real-phone checks: sound volumes, vibration, small-screen feel on the live URL.
+**How to verify:**
+- `npm run build` (no chunk-size warning) and `npm run lint` pass; `npx wrangler deploy --dry-run` reads `dist`.
+- Firebase console → Realtime Database → Rules shows the new rules (host checks on `meta`, `settings`, `round`, `drawn`, `scores`).
+- Live: open `https://whomst.<account>.workers.dev` on 4 phones/tabs, play a few rounds with a tie, End Game, Play Again, kick, Leave. `/anything` and a room link load the app.
+- Checked in this session (dev server on the live database, 4 new tabs, room NJAS): from a non-host tab, writes to `meta/phase`, `settings`, another player's score, own score ≠ 0, `round`, `drawn`, `kicked`, `meta/hostUid`, a junk node, a vote in LOBBY, a prompt with someone else's author id or `used: true` were all PERMISSION_DENIED. Votes for an old round, for a non-eligible uid and a second vote were denied; the valid vote passed. UI flow worked end to end: prompt submit, host settings, Start, Start voting, auto-reveal on a 2–2 tie, Scores, Next Round, End Voting with no votes, End Game, Play Again (scores reset to 0), kick (the kicked tab can't rejoin, even with a direct write), below-4 return to lobby, host Leave → Bo claimed host and could change settings, last Leave deleted the room. Name lock, player record and join-number writes into a deleted room were denied. Lobby fits 320px with no horizontal scroll. The production build boots with the split chunks. `/whomst` was empty afterwards.
+**Commit:** Phase 7: Hardening, deploy, QA
+
 ## [2026-11-16] Phase 6 — Polish
 **Status:** done (sound feel and vibration still to be checked on a real phone)
 **Summary:** The big moments now have motion, sound and haptics. Reveal bars fill one after another (lowest first) with count-ups under a drumroll, then after a pause the winner rows flash gold, crowns drop in with a bounce, the glow fades in, confetti bursts, a fanfare plays and phones vibrate. The prompt scales in, the locked-in card pulses once (blip + short buzz), the latest winners' crown counts tick up on the scoreboard, and Final results rise in with a fanfare. Sounds are synthesized, unlock on the first tap, and a corner MuteToggle on every screen remembers the choice. Reduced motion shows final states at once.

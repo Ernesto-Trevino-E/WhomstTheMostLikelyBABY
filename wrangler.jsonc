@@ -1,0 +1,12 @@
+// Cloudflare Worker that serves the static Vite build (no Worker script).
+// Cloudflare builds this from GitHub: `npm run build`, then `npx wrangler deploy`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "whomst",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    // Unknown paths serve index.html, so direct links never 404.
+    "not_found_handling": "single-page-application"
+  }
+}

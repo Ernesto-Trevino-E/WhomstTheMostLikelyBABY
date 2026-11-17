@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-17
-**Current phase:** Phase 7 — Hardening, deploy to Cloudflare, QA (NOT STARTED)
-**Next action:** Verify Phase 6 on a real phone (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 7.
+**Current phase:** Phase 7 — Hardening, deploy to Cloudflare, QA (code committed; deploy in progress)
+**Next action:** Finish the Cloudflare setup (push `main`, connect the repo to the `whomst` Worker, build variables, Firebase authorized domain), then play a game on the live URL with real phones.
 
 ---
 
@@ -21,7 +21,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
 - [x] **Phase 5** — Edge cases and room lifecycle
 - [x] **Phase 6** — Polish: animations, sound, haptics
-- [ ] **Phase 7** — Hardening, deploy to Cloudflare, QA
+- [~] **Phase 7** — Hardening, deploy to Cloudflare, QA (rules, config, QA and README done; live deploy pending)
 
 ---
 
@@ -39,7 +39,8 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - **Repo:** GitHub `Ernesto-Trevino-E/WhomstTheMostLikelyBABY` (the `origin` remote), production branch `main`. Every push to `main` will redeploy once connected.
 - **Build:** `npm run build`, output directory `dist`. Needs the `VITE_FIREBASE_*` variables at build time (they are baked into the bundle; `.env.local` is gitignored, so Cloudflare must have them).
 - **Routing:** the app uses hash routes (`#/ABCD`), so every page load hits `/`; still add the single-page-app fallback the build plan asks for.
-- **Not decided yet (Phase 7 plan):** Cloudflare Workers static assets vs Pages, and the project/subdomain name.
+- **Decided (Phase 7, user):** Cloudflare **Workers static assets** (per `00-project-overview.md`), Worker name **`whomst`** → `whomst.<account>.workers.dev`. Config in `wrangler.jsonc` (`dist`, `not_found_handling: single-page-application`); deploy command `npx wrangler deploy` (wrangler 4.156.2 pinned as a devDependency).
+- Build variables: the 7 `VITE_FIREBASE_*` values the app reads (`MEASUREMENT_ID` is unused). Claude may not type API keys into a site, so the user pastes the values.
 - The user is signed in to Cloudflare in their own Chrome (Claude in Chrome), not in the in-app browser. Dashboard clicks that create or change a Cloudflare project need the user's OK first.
 
 ---
@@ -52,6 +53,8 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Deviations from the context files
 
+- **Two ballots in one write (Phase 7, known limit):** rules check one new `voted` flag per write but can't count ballots without linking voter and ballot, so a hand-crafted write could still carry two ballots. The UI never does this.
+- **Host claim rule (Phase 7):** rules can't compute "lowest join number", so a member may claim `meta/hostUid` when the stored host is gone, kicked, offline > 30s, or has a higher join number than the claimer.
 - **Rooms abandoned without Leave are deleted lazily (Phase 5):** with no server, a room whose players all close their tabs can't delete itself. It is deleted when the last player presses Leave, or later when a join or create hits its code (user's choice, 2026-11-16). Rooms nobody touches again stay in the database.
 - **`meta/gameBaseRound` (Phase 5):** new meta field (rules deployed). Round labels and highlights are relative to it, so a second game in the same room starts at Round 1 while ballot keys stay unique.
 - **Results are frozen in `round/tally` (Phase 4):** not in the Phase 2 data model. When voting ends, the counts are copied to `round/tally/{uid}` and crowns are added once, so a late ballot can't change the reveal. Needed a rules addition (deployed).
@@ -108,11 +111,13 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 - No blockers.
 - RTDB rules are deployed (from `database.rules.json` via `firebase.json`, database only); Phase 3 added the host-only `kicked` node, Phase 4 added `round/tally`, Phase 5 added room delete (only when it has no players), deleting players offline > 30s, freeing their name locks, and `meta/gameBaseRound`. Test rooms `XVJF`, `RWRD`, `JSDX` were deleted in Phase 5; `/whomst` was empty after Phase 5 testing.
-- Phase transitions run on the effective host's tab, guarded by a `meta` transaction (expected phase + round). Rules still let any signed-in player write `meta`, `round` and ballots in any phase: tighten in Phase 7.
-- Known race (Phase 7): if someone joins at the exact moment the last player's Leave deletes the room, the join can write a player into a room with no `meta`.
+- Phase transitions run on the effective host's tab, guarded by a `meta` transaction (expected phase + round). Since Phase 7 the rules allow those writes only from `meta/hostUid`.
+- The join-vs-last-Leave race is closed (Phase 7): name locks and player records need `meta` to exist, and `joinRoom` turns the permission error into "No open room with that code."
+- Still open (accepted): if the host's tab dies between VOTE→REVEAL and the tally write, that round has no frozen tally and no crowns.
 - Testing tip: when driving the dev app from the browser console, import app modules (`/src/lib/*.ts`) only. Importing `/node_modules/.vite/deps/firebase_database.js` without its `?v=` hash loads a second Firebase SDK copy and breaks writes in that tab (stack overflow in `ChildrenNode.equals`).
 - Player color p9 (`#8FBFB0`) is the same as `sage` (HOST badge, info). A p9 player who is host has a sage avatar next to a sage badge. Kept as the brief says; consider changing p9 later.
 - npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.
-- The main JS chunk is now 505 kB (Vite's 500 kB warning; it was 496 kB after Phase 5, mostly Firebase). Consider code-splitting in Phase 7.
+- Bundle (Phase 7): Firebase is its own chunk (213 kB) next to the app (292 kB), via `build.rolldownOptions.output.codeSplitting` in `vite.config.ts`; no size warning.
+- npm also held the `esbuild` and `workerd` postinstall scripts (wrangler's); not needed for an assets-only `wrangler deploy` (the dry run works without them).
 - The in-app browser reports `prefers-reduced-motion: reduce`, so the animated reveal can only be checked there by patching `window.matchMedia` in the page (return a plain object with `matches: false`). Check the real animation on a phone.
 - Linting uses **oxlint** (create-vite's current default), not ESLint. Run it with `npm run lint`. Typecheck runs as part of `npm run build` (`tsc -b`).
