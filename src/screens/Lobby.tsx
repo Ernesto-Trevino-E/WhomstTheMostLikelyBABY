@@ -1,5 +1,5 @@
 // Lobby: room code, live player list, host controls (Start, Kick, Prompts), prompt submissions.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/Button'
 import { Divider } from '../components/Divider'
 import { KickIcon } from '../components/icons'
@@ -22,6 +22,7 @@ import {
 import { activePlayers, isReconnecting } from '../lib/presence'
 import { waitingTotal } from '../lib/prompts'
 import { kickPlayer, startGame } from '../lib/rooms'
+import { playJoin } from '../lib/sound'
 
 export interface LobbyProps {
   code: string
@@ -57,6 +58,16 @@ export default function Lobby({
   const allowSubmissions = (settings ?? DEFAULT_SETTINGS).allowSubmissions
   const waiting = waitingTotal(prompts)
 
+  // Join chime when someone else arrives (not for the list we see on first load).
+  const joinKey = list.map(([pid]) => pid).join(',')
+  const seen = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    const ids = joinKey ? joinKey.split(',') : []
+    const prev = seen.current
+    seen.current = new Set(ids)
+    if (prev && ids.some((pid) => !prev.has(pid) && pid !== uid)) playJoin()
+  }, [joinKey, uid])
+
   async function start() {
     setBusy(true)
     try {
@@ -84,7 +95,8 @@ export default function Lobby({
 
   return (
     <Screen className="gap-6">
-      <header className="flex items-center justify-between gap-4">
+      {/* pr-14 keeps Leave clear of the corner mute toggle */}
+      <header className="flex items-center justify-between gap-4 pr-14">
         <h1 className="font-display text-xl font-black tracking-wide uppercase">Lobby</h1>
         <Button variant="ghost" size="sm" onClick={() => setModal('leave')}>
           Leave

@@ -7,7 +7,7 @@ export interface MuteToggleProps {
   className?: string
 }
 
-/** Small icon button for sound on/off. Controlled; persistence comes in Phase 6. */
+/** Small icon button for sound on/off. Controlled; App wires it to the persisted mute store. */
 export function MuteToggle({ muted, onToggle, className }: MuteToggleProps) {
   return (
     <button

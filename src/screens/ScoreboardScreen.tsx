@@ -1,11 +1,13 @@
 // Scoreboard: running crown tally. The host starts the next round, changes the prompt
 // filter between rounds, or ends the game.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '../components/Button'
 import { CrownBadge } from '../components/CrownBadge'
 import { Divider } from '../components/Divider'
 import { GameScreen, type GameProps } from '../components/GameScreen'
 import { useAction } from '../hooks/useAction'
+import { useCountUp } from '../hooks/useCountUp'
+import { cn } from '../lib/cn'
 import { Modal } from '../components/Modal'
 import { Panel } from '../components/Panel'
 import { PlayerChip } from '../components/PlayerChip'
@@ -74,7 +76,11 @@ export default function ScoreboardScreen(props: GameProps) {
                       </span>
                     )}
                     {crowns > 0 ? (
-                      <CrownBadge size="sm" count={crowns} glow={latest.has(pid)} />
+                      latest.has(pid) ? (
+                        <TickingCrowns crowns={crowns} />
+                      ) : (
+                        <CrownBadge size="sm" count={crowns} glow={false} />
+                      )
                     ) : (
                       <span className="font-mono text-sm font-bold text-cream/60">0</span>
                     )}
@@ -123,5 +129,25 @@ export default function ScoreboardScreen(props: GameProps) {
         <p>Everyone goes to the final results.</p>
       </Modal>
     </GameScreen>
+  )
+}
+
+const TICK_DELAY_MS = 300
+
+/** Latest winner's crown count: ticks up from the previous count with a brief pulse. */
+function TickingCrowns({ crowns }: { crowns: number }) {
+  const [go, setGo] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => setGo(true), TICK_DELAY_MS)
+    return () => window.clearTimeout(t)
+  }, [])
+  const shown = useCountUp(crowns, 250, go, crowns - 1)
+  return (
+    <CrownBadge
+      size="sm"
+      count={shown}
+      glow
+      className={cn(go && 'animate-tick-pop')}
+    />
   )
 }

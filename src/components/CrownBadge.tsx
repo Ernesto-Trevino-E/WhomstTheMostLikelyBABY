@@ -6,19 +6,21 @@ export interface CrownBadgeProps {
   /** Shows "x3" next to the crown when set. */
   count?: number
   glow?: boolean
+  /** Drops in from above with a bounce (Reveal crown moment). */
+  drop?: boolean
   className?: string
 }
 
 const px = { sm: 16, md: 24, lg: 40 }
 
 /** Gold crown with glow. Gold is reserved for crowns and winners. */
-export function CrownBadge({ size = 'md', count, glow = true, className }: CrownBadgeProps) {
+export function CrownBadge({ size = 'md', count, glow = true, drop, className }: CrownBadgeProps) {
   const label = count !== undefined ? `${count} crown${count === 1 ? '' : 's'}` : 'Crowned'
   return (
     <span
       role="img"
       aria-label={label}
-      className={cn('inline-flex items-center gap-1 text-gold', className)}
+      className={cn('inline-flex items-center gap-1 text-gold', drop && 'animate-crown-drop', className)}
     >
       <CrownIcon
         size={px[size]}

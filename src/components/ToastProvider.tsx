@@ -6,6 +6,7 @@ import {
   type ToastItem,
   type ToastType,
 } from '../lib/toastContext'
+import { playError } from '../lib/sound'
 import { Toast } from './Toast'
 
 /** Provides `useToast()` and renders the toast stack at the top of the screen. */
@@ -20,6 +21,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const show = useCallback((message: string, type: ToastType = 'info') => {
+    if (type === 'error') playError()
     const id = nextId.current++
     setToasts((list) => [...list, { id, message, type }])
     const t = window.setTimeout(() => {

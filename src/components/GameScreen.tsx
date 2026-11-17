@@ -41,7 +41,8 @@ export function GameScreen({ label, isHost, onLeave, children, footer, hideLeave
   const [leaveOpen, setLeaveOpen] = useState(false)
   return (
     <Screen className="gap-5">
-      <header className="flex items-center justify-between gap-4">
+      {/* pr-14 keeps Leave clear of the corner mute toggle */}
+      <header className="flex min-h-12 items-center justify-between gap-4 pr-14">
         <p className="font-display text-sm font-bold tracking-[0.2em] text-sage uppercase">
           {label}
         </p>

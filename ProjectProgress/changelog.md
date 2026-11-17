@@ -19,6 +19,26 @@
 
 ---
 
+## [2026-11-16] Phase 6 — Polish
+**Status:** done (sound feel and vibration still to be checked on a real phone)
+**Summary:** The big moments now have motion, sound and haptics. Reveal bars fill one after another (lowest first) with count-ups under a drumroll, then after a pause the winner rows flash gold, crowns drop in with a bounce, the glow fades in, confetti bursts, a fanfare plays and phones vibrate. The prompt scales in, the locked-in card pulses once (blip + short buzz), the latest winners' crown counts tick up on the scoreboard, and Final results rise in with a fanfare. Sounds are synthesized, unlock on the first tap, and a corner MuteToggle on every screen remembers the choice. Reduced motion shows final states at once.
+**Files added/changed:** new `src/lib/{sound,haptics}.ts`, `src/hooks/{useMuted,useCountUp,useRevealSequence}.ts`, `src/components/Confetti.tsx`; changed `src/index.css` (keyframes, reduced-motion delays), `src/App.tsx` (corner mute, audio unlock), `src/components/{Button,ToastProvider,VoteBar,VoteCard,CrownBadge,MuteToggle,GameScreen}.tsx`, `src/screens/{PromptScreen,VoteScreen,RevealScreen,ScoreboardScreen,FinalResults,Lobby,Gallery}.tsx`.
+**Decisions made:** synthesized sounds; host's Scores waits for the sequence and a reload doesn't replay it; everyone vibrates at the crown and mute is sound only (all three by the user). Reveal pacing, reduced-motion behaviour and the prompt animation choice are under Resolved decisions in status.md.
+**Deviations from context files:** none. (Brief 4.3 "slide-in" vs 4.5 "scale in" for the prompt: 4.5 used, recorded in status.md.)
+**Deferred / follow-ups:**
+- Phase 7: the main chunk is 505 kB (over Vite's warning); consider code-splitting Firebase or the game screens.
+- Tune volumes and the fanfare/drumroll after hearing them on phones.
+**How to verify:**
+- `npm run build` and `npm run lint` pass.
+- `npm run dev` → `/#gallery`: Sound and haptics buttons play each sound (tap the page once first); Confetti fires; Replay reveal runs the demo (stage: fill → crown → done). The corner toggle mutes everything and stays muted after a reload.
+- 4-tab game (new tabs): the prompt scales in; Lock In pulses your card once (Android: short buzz). Make a 2–2 tie → each tab plays the reveal: lowest bar first, numbers count up, drumroll, pause, both rows go gold with crowns dropping, confetti, fanfare, "It's a tie! 2 crowns"; the host's **Scores** is disabled until it ends. Reload a tab on Reveal → final state at once, no replay.
+- Scores → winners show +1 and their crown count ticks up with a pop. End Game → podium, leaderboard and highlights rise in one after another; fanfare once.
+- Lobby: another tab joining plays the join chime; failed actions play the error buzz.
+- Reduced motion (OS setting, or DevTools → Rendering → prefers-reduced-motion: reduce): reveal shows the final state at once, no confetti, Scores enabled right away; fanfare still plays.
+- On a phone: sound levels feel short and quiet; Android vibrates on Lock In (short) and at the crown (long); iOS doesn't vibrate (expected) and its silent switch also mutes the sounds.
+- Checked in this session (in-app browser, 4 tabs, room TUVH, deleted by the last Leave): gallery demo timing (with `matchMedia` patched, since the pane reports reduced motion), real tie reveal order and Scores unlock at ~2.8s, lock-in pulse clears after ~450ms, scoreboard tick 0→1, Final results stagger + fanfare flag, mute persisted across reload, reduced-motion path instant on the other tabs, no app console errors. Sounds and vibration were not heard/felt.
+**Commit:** Phase 6: Polish
+
 ## [2026-11-16] Phase 5 — Edge cases and room lifecycle
 **Status:** done
 **Summary:** Every edge case in `01-game-flow.md` §3 now works. Players who are gone for more than 30s are removed (names freed) and come back as new players, so an original host who returns doesn't get the role back. You see a red "Reconnecting..." banner when your own connection drops. A player who joins while the prompt is showing plays that round. Dropping below 4 players mid-game sends everyone to the lobby with a notice. End Game shows the real Final results (podium, leaderboard, highlights) with host Play Again and Leave. Rooms are deleted when the last player leaves or when someone later hits a stale room's code.

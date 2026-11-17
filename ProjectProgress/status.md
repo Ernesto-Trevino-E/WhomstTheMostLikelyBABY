@@ -5,8 +5,8 @@
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
 **Last updated:** 2026-11-16
-**Current phase:** Phase 6 — Polish (NOT STARTED)
-**Next action:** Verify Phase 5 (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 6.
+**Current phase:** Phase 7 — Hardening, deploy to Cloudflare, QA (NOT STARTED)
+**Next action:** Verify Phase 6 on a real phone (see the changelog's "How to verify"), choose the Cloudflare deploy method, then start a new session, enter plan mode and plan Phase 7.
 
 ---
 
@@ -20,7 +20,7 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - [x] **Phase 3** — Pre-game: landing, create/join, lobby, prompt pool
 - [x] **Phase 4** — Core loop: prompt, vote, reveal, scoreboard
 - [x] **Phase 5** — Edge cases and room lifecycle
-- [ ] **Phase 6** — Polish: animations, sound, haptics
+- [x] **Phase 6** — Polish: animations, sound, haptics
 - [ ] **Phase 7** — Hardening, deploy to Cloudflare, QA
 
 ---
@@ -52,6 +52,13 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 ## Resolved decisions
 
+- **Sounds are synthesized (Phase 6, 2026-11-16, user):** Web Audio API in `src/lib/sound.ts`, no audio files or new dependency. Triggers: tap beep on every Button (opt out with `sound={false}`) and on vote-card select, lock-in blip, drumroll under the reveal fills, fanfare at the crown moment and once on Final results, error buzz on error toasts, join chime in the lobby when someone else joins. Audio unlocks on the first pointer/key press. Mute is stored in `localStorage` (`whomst:muted`), default on (sound on); one global MuteToggle fixed top-right on every screen.
+- **Host's Scores waits for the reveal (Phase 6, 2026-11-16, user):** disabled until that tab's sequence finishes. The sequence runs once per room+round per tab (`sessionStorage` `whomst:reveal:{code}:r{n}`); a reload on Reveal shows the final state at once.
+- **Haptics (Phase 6, 2026-11-16, user):** every phone vibrates long at the crown moment; short on your own Lock In. Mute is sound only, not vibration. Skipped silently where unsupported (iOS).
+- **Reveal pacing (Phase 6, 2026-11-16):** 0-vote rows stay at 0; voted rows fill lowest first at 600ms each, shortened so all fills take at most 4s; then 400ms pause and the crown moment. Starts once `round/tally` is there (or after 1.5s with live counts). No votes: drumroll stops, no crown/fanfare/vibration.
+- **Reduced motion (Phase 6, 2026-11-16):** final state at once, no confetti or count-ups, animation delays zeroed; fanfare and vibration still fire once (they are not motion).
+- **Prompt animation (Phase 6, 2026-11-16):** brief 4.3 says "slide-in", 4.5 says "scale in from 0.95 with a fade, 300ms": the prompt panel uses the 4.5 scale+fade (the screen transition already slides).
+
 - **Play Again (Phase 5, 2026-11-16, user):** host button; everyone returns to the lobby. Non-hosts see "Waiting for host..." and Leave. **Start Game always starts a fresh game:** scores reset to 0 and round labels restart at 1 (covers Play Again and the below-4 return). `drawn` is kept so the next game doesn't repeat prompts straight away.
 - **Final-results highlights (Phase 5, 2026-11-16, user):** included as three small panels computed from this game's anonymous ballots (no new data): Most crowned, Biggest landslide (most votes one player got in a round, at least 2), Ties (rounds that ended tied). The podium shows only players with at least one crown; tied players share a rank and a tone (gold 1st, cream 2nd, sage 3rd).
 - **Room cleanup (Phase 5, 2026-11-16, user):** last Leave deletes the room; a join or create that hits a stale room deletes it (create then reuses the code). No sweep index. Rooms younger than 30s are never cleaned up (their first player may not be written yet).
@@ -81,8 +88,8 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 - **Prompt system (planning, 2026-11-16):** prompts store only the ending and the app adds "Who's most likely to". Draw order is unused player submissions first, then category-filtered stock prompts, then reshuffle everything. Stock categories: Chill, Cheeky, Harsh, Gotcha (host filter; submissions are uncategorised and always included). Submissions are anonymous, live only in the room, and can be added in the lobby or mid-game via an "Add a prompt" button on the Vote screen. Tone: adult friends, mostly cheeky, nothing explicit. Details in `01-game-flow.md` 1.5, `03-build-plan.md` Phases 2-4 and `04-prompt-deck.md`.
 - **Gallery is dev-only (Phase 1, 2026-11-15):** `/#gallery` only works under `npm run dev`; the Gallery module is lazy-loaded behind `import.meta.env.DEV` and is not in the production bundle.
-- **No icon or animation libraries (Phase 1, 2026-11-15):** icons are inline SVG (`src/components/icons.tsx`), motion is CSS keyframes in `src/index.css`. Phase 6 may add a library if the reveal needs it.
-- **MuteToggle is UI-only (Phase 1, 2026-11-15):** it is a controlled component; `localStorage` persistence and real audio come in Phase 6.
+- **No icon or animation libraries (Phase 1, 2026-11-15; confirmed Phase 6):** icons are inline SVG (`src/components/icons.tsx`), motion is CSS keyframes in `src/index.css`; confetti is a small DOM burst (`Confetti.tsx`).
+- **MuteToggle is controlled (Phase 1, 2026-11-15):** App wires it to the persisted mute store since Phase 6.
 - **Initials rule (Phase 1, 2026-11-15):** first letter of the first and last word (ignoring emoji-only words); a single word gives its first two letters; empty gives "?".
 - **Firebase web app (Phase 0, 2026-11-15):** registered a separate web app `whomst-web` in the ImpastaBABY project, so the other game's `impasta-web` app is untouched. Its config is in `.env.local` (gitignored).
 
@@ -97,4 +104,6 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 - Testing tip: when driving the dev app from the browser console, import app modules (`/src/lib/*.ts`) only. Importing `/node_modules/.vite/deps/firebase_database.js` without its `?v=` hash loads a second Firebase SDK copy and breaks writes in that tab (stack overflow in `ChildrenNode.equals`).
 - Player color p9 (`#8FBFB0`) is the same as `sage` (HOST badge, info). A p9 player who is host has a sage avatar next to a sage badge. Kept as the brief says; consider changing p9 later.
 - npm held two postinstall scripts (`@firebase/util`, `protobufjs`) under its install-scripts allowlist. Neither is needed for a Vite build, so both are left unapproved.
+- The main JS chunk is now 505 kB (Vite's 500 kB warning; it was 496 kB after Phase 5, mostly Firebase). Consider code-splitting in Phase 7.
+- The in-app browser reports `prefers-reduced-motion: reduce`, so the animated reveal can only be checked there by patching `window.matchMedia` in the page (return a plain object with `matches: false`). Check the real animation on a phone.
 - Linting uses **oxlint** (create-vite's current default), not ESLint. Run it with `npm run lint`. Typecheck runs as part of `npm run build` (`tsc -b`).

@@ -21,6 +21,60 @@ import { Switch } from '../components/Switch'
 import { useToast } from '../hooks/useToast'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { PLAYER_COLORS, initials, playerColor } from '../lib/players'
+import { Confetti } from '../components/Confetti'
+import { useMuted } from '../hooks/useMuted'
+import { useRevealSequence } from '../hooks/useRevealSequence'
+import { vibrate } from '../lib/haptics'
+import { playDrumroll, playError, playFanfare, playJoin, playLockIn, playTap } from '../lib/sound'
+import type { Player } from '../lib/model'
+import { RevealRow } from './RevealScreen'
+
+const DEMO_ROWS = [
+  { name: 'Ana', joinNumber: 1, votes: 3 },
+  { name: 'Bob Ross', joinNumber: 2, votes: 3 },
+  { name: 'Q', joinNumber: 3, votes: 1 },
+  { name: 'Dee 🎉', joinNumber: 5, votes: 0 },
+]
+
+function RevealDemo({ run }: { run: number }) {
+  const voted = DEMO_ROWS.filter((r) => r.votes > 0)
+  const top = Math.max(...DEMO_ROWS.map((r) => r.votes))
+  const [demoCode] = useState(() => `GALLERY-${Date.now()}`)
+  const seq = useRevealSequence({
+    code: demoCode,
+    round: run,
+    votedRows: voted.length,
+    hasCrown: true,
+    ready: true,
+  })
+  const crownShown = seq.stage === 'crown' || seq.stage === 'done'
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="font-mono text-sm text-cream/60">stage: {seq.stage}</p>
+      {DEMO_ROWS.map((r) => {
+        const order = voted.length - 1 - voted.findIndex((v) => v.name === r.name)
+        const crowned = r.votes === top
+        return (
+          <RevealRow
+            key={r.name}
+            player={{ name: r.name, joinNumber: r.joinNumber } as Player}
+            votes={r.votes}
+            max={top}
+            filling={r.votes > 0 && order < seq.started}
+            fillMs={seq.perRowMs}
+            crowned={crowned}
+            crownShown={crownShown}
+            dim={crownShown && !crowned}
+            animate={!seq.instant}
+            isHost={false}
+            isYou={false}
+          />
+        )
+      })}
+      {crownShown && !seq.instant && <Confetti />}
+    </div>
+  )
+}
 
 const NAMES = [
   'Ana',
@@ -54,7 +108,9 @@ export default function Gallery() {
   const toast = useToast()
   const reduced = usePrefersReducedMotion()
   const [selected, setSelected] = useState<number | null>(2)
-  const [muted, setMuted] = useState(false)
+  const [muted, toggleMuted] = useMuted()
+  const [burst, setBurst] = useState(0)
+  const [revealRun, setRevealRun] = useState(1)
   const [modal, setModal] = useState<null | 'prompts' | 'kick' | 'lobby'>(null)
   const [replay, setReplay] = useState(0)
   const [bars, setBars] = useState([5, 5, 3, 1, 0])
@@ -69,8 +125,51 @@ export default function Gallery() {
           </h1>
           <Caption>Dev only. Reduced motion: {reduced ? 'on' : 'off'}.</Caption>
         </div>
-        <MuteToggle muted={muted} onToggle={() => setMuted((m) => !m)} />
       </header>
+
+      <Section title="Sound and haptics">
+        <Caption>
+          Synthesized (Web Audio). Muted: {muted ? 'yes' : 'no'} (saved in localStorage; the corner
+          toggle is the real one). Vibration only on supporting phones.
+        </Caption>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['Tap', playTap],
+              ['Lock-in', playLockIn],
+              ['Drumroll', () => playDrumroll(2400)],
+              ['Fanfare', playFanfare],
+              ['Error', playError],
+              ['Join', playJoin],
+            ] as const
+          ).map(([label, fn]) => (
+            <Button key={label} size="sm" variant="secondary" sound={false} onClick={() => void fn()}>
+              {label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <MuteToggle muted={muted} onToggle={toggleMuted} />
+          <Button size="sm" variant="secondary" onClick={() => vibrate('short')}>
+            Buzz short
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => vibrate('long')}>
+            Buzz long
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setBurst((b) => b + 1)}>
+            Confetti
+          </Button>
+        </div>
+        {burst > 0 && <Confetti burstKey={burst} />}
+      </Section>
+
+      <Section title="Reveal sequence">
+        <RevealDemo key={revealRun} run={revealRun} />
+        <Button size="sm" variant="secondary" onClick={() => setRevealRun((r) => r + 1)}>
+          Replay reveal
+        </Button>
+        <Caption>Fake rows (3, 3, 1, 0): tie crown. Replays don't count as "seen".</Caption>
+      </Section>
 
       <Section title="Button">
         <Button fullWidth>Create Room</Button>

@@ -1,6 +1,6 @@
 // Final results after End Game: podium (top 3), full leaderboard, highlights from the
 // anonymous ballots, then Play Again (host, everyone back to the lobby) or Leave.
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, type CSSProperties, type ReactNode } from 'react'
 import { Button } from '../components/Button'
 import { CrownBadge } from '../components/CrownBadge'
 import { Divider } from '../components/Divider'
@@ -14,8 +14,31 @@ import { cn } from '../lib/cn'
 import { computeHighlights, playAgain } from '../lib/game'
 import { paths } from '../lib/model'
 import { activePlayers } from '../lib/presence'
+import { playFanfare } from '../lib/sound'
 
 const PODIUM_TONE: Record<number, PanelTone> = { 1: 'gold', 2: 'cream', 3: 'sage' }
+const STAGGER_MS = 120
+
+/** Staggered rise-in; delays are ignored under reduced motion (global CSS). */
+const rise = (i: number): { className: string; style: CSSProperties } => ({
+  className: 'animate-rise-in',
+  style: { animationDelay: `${i * STAGGER_MS}ms` },
+})
+
+/** Fanfare once per game end per tab (not again on reload). */
+function useFinalFanfare(code: string, round: number, anyCrowns: boolean) {
+  useEffect(() => {
+    if (!anyCrowns) return
+    const key = `whomst:final:${code}:r${round}`
+    try {
+      if (window.sessionStorage.getItem(key) === '1') return
+      window.sessionStorage.setItem(key, '1')
+    } catch {
+      // Storage blocked: play anyway.
+    }
+    playFanfare()
+  }, [code, round, anyCrowns])
+}
 
 export default function FinalResults(props: GameProps) {
   const { code, uid, isHost, hostUid, round, displayRound, gameBaseRound, players, kicked, scores } =
@@ -41,6 +64,7 @@ export default function FinalResults(props: GameProps) {
     names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
   const topCrowns = rows[0]?.crowns ?? 0
   const mostCrowned = anyCrowns ? rows.filter((r) => r.crowns === topCrowns) : []
+  useFinalFanfare(code, round.number, anyCrowns)
 
   return (
     <GameScreen
@@ -74,7 +98,11 @@ export default function FinalResults(props: GameProps) {
           {podium.map(({ pid, p, crowns, rank }, i) => {
             const tone = PODIUM_TONE[rank] ?? 'slate'
             return (
-              <li key={pid} className={cn(i === 0 && 'col-span-2')}>
+              <li
+                key={pid}
+                className={cn(i === 0 && 'col-span-2', rise(i).className)}
+                style={rise(i).style}
+              >
                 <Panel
                   tone={tone}
                   className={cn('flex flex-col gap-2', tone === 'gold' && 'shadow-glow-gold')}
@@ -108,7 +136,7 @@ export default function FinalResults(props: GameProps) {
         </Panel>
       )}
 
-      <Panel className="flex flex-col gap-3">
+      <Panel className={cn('flex flex-col gap-3', rise(3).className)} style={rise(3).style}>
         <Divider label="Leaderboard" />
         <ol className="flex flex-col gap-1">
           {rows.map(({ pid, p, crowns, rank }) => (
@@ -136,7 +164,11 @@ export default function FinalResults(props: GameProps) {
       </Panel>
 
       {(mostCrowned.length > 0 || highlights.landslide || highlights.ties > 0) && (
-        <section className="flex flex-col gap-3" aria-label="Highlights">
+        <section
+          className={cn('flex flex-col gap-3', rise(4).className)}
+          style={rise(4).style}
+          aria-label="Highlights"
+        >
           <Divider label="Highlights" />
           {mostCrowned.length > 0 && (
             <Highlight title="Most crowned">

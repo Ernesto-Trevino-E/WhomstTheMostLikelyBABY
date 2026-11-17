@@ -1,6 +1,6 @@
 // Vote phase: pick one player (yourself included) and Lock In. Afterwards only counts are
 // shown ("x / n VOTED"). Everyone can add a prompt mid-round; the host can end voting early.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Banner } from '../components/Banner'
 import { Button } from '../components/Button'
 import { GameScreen, PromptText, type GameProps } from '../components/GameScreen'
@@ -15,6 +15,8 @@ import { DEFAULT_SETTINGS } from '../lib/model'
 import { eligiblePlayers, endVoting } from '../lib/game'
 import { formatPrompt } from '../lib/prompts'
 import { castVote } from '../lib/votes'
+import { vibrate } from '../lib/haptics'
+import { playLockIn, playTap } from '../lib/sound'
 
 export interface VoteScreenProps extends GameProps {
   /** voted/r{n}: who has voted (never for whom). */
@@ -37,9 +39,23 @@ export default function VoteScreen(props: VoteScreenProps) {
   const selectionValid = selected !== null && options.some(([pid]) => pid === selected)
   const allowSubmissions = (settings ?? DEFAULT_SETTINGS).allowSubmissions
 
+  // The card I locked in pulses once (local only; it never reveals the vote to anyone else).
+  const [pulsing, setPulsing] = useState<string | null>(null)
+  useEffect(() => {
+    if (!pulsing) return
+    const t = window.setTimeout(() => setPulsing(null), 450)
+    return () => window.clearTimeout(t)
+  }, [pulsing])
+
   function lockIn() {
     if (!selected || !selectionValid) return
-    void vote.run(() => castVote(code, round.number, uid, selected), 'Could not lock in your vote.')
+    const target = selected
+    void vote.run(async () => {
+      await castVote(code, round.number, uid, target)
+      setPulsing(target)
+      playLockIn()
+      vibrate('short')
+    }, 'Could not lock in your vote.')
   }
 
   return (
@@ -50,7 +66,7 @@ export default function VoteScreen(props: VoteScreenProps) {
       footer={
         <>
           {canVote && !hasVoted && (
-            <Button fullWidth disabled={!selectionValid || vote.busy} onClick={lockIn}>
+            <Button fullWidth sound={false} disabled={!selectionValid || vote.busy} onClick={lockIn}>
               {vote.busy ? 'Locking in...' : 'Lock In'}
             </Button>
           )}
@@ -101,7 +117,11 @@ export default function VoteScreen(props: VoteScreenProps) {
               isYou={pid === uid}
               selected={!hasVoted && selected === pid}
               disabled={locked}
-              onSelect={() => setSelected(pid)}
+              pulse={pulsing === pid}
+              onSelect={() => {
+                playTap()
+                setSelected(pid)
+              }}
             />
           </li>
         ))}

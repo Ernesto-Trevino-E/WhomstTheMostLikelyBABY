@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../lib/cn'
+import { playTap } from '../lib/sound'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'ghost'
 
@@ -9,6 +10,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'md' | 'sm'
   fullWidth?: boolean
   icon?: ReactNode
+  /** Tap beep on click (default on). Off where the action has its own sound. */
+  sound?: boolean
 }
 
 const variants: Record<ButtonVariant, string> = {
@@ -35,11 +38,17 @@ export function Button({
   className,
   children,
   type = 'button',
+  sound = true,
+  onClick,
   ...rest
 }: ButtonProps) {
   return (
     <button
       type={type}
+      onClick={(e) => {
+        if (sound) playTap()
+        onClick?.(e)
+      }}
       className={cn(
         'inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 rounded-pill',
         'font-display font-bold uppercase select-none',

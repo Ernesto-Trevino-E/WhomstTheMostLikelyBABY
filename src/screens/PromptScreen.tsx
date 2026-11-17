@@ -29,7 +29,7 @@ export default function PromptScreen({ code, isHost, round, displayRound, onLeav
       }
     >
       <div className="flex flex-1 flex-col justify-center">
-        <Panel variant="double" className="text-center">
+        <Panel variant="double" className="animate-prompt-in text-center">
           <PromptText>{formatPrompt(round.text)}</PromptText>
         </Panel>
       </div>

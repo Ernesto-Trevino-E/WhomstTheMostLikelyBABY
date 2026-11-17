@@ -134,6 +134,129 @@
   animation: toast-in 180ms ease-out both;
 }
 
+/* Phase 6: big moments (styling brief 4.5) */
+@keyframes prompt-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lock-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+    box-shadow: var(--shadow-glow-orange);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Winner row: panel flashes gold, then settles with the glow faded in. */
+@keyframes gold-flash {
+  0% {
+    background-color: var(--color-panel);
+    box-shadow: none;
+  }
+  25% {
+    background-color: rgb(242 182 94 / 0.55);
+  }
+  100% {
+    background-color: var(--color-panel);
+    box-shadow: var(--shadow-glow-gold);
+  }
+}
+
+@keyframes crown-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-48px) scale(0.8);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(6px) scale(1.05);
+  }
+  75% {
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 540deg));
+  }
+}
+
+@keyframes tick-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-prompt-in {
+  animation: prompt-in 300ms ease-out both;
+}
+
+@utility animate-lock-pulse {
+  animation: lock-pulse 420ms ease-out;
+}
+
+@utility animate-gold-flash {
+  animation: gold-flash 700ms ease-out both;
+}
+
+@utility animate-crown-drop {
+  animation: crown-drop 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility animate-confetti {
+  animation: confetti-fall var(--fall, 1.8s) cubic-bezier(0.3, 0.6, 0.5, 1) both;
+}
+
+@utility animate-tick-pop {
+  animation: tick-pop 360ms ease-out;
+}
+
+@utility animate-rise-in {
+  animation: rise-in 360ms ease-out both;
+}
+
 /* Native dialog backdrop for Modal */
 dialog::backdrop {
   background-color: rgb(14 11 30 / 0.8);
@@ -145,6 +268,7 @@ dialog::backdrop {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
