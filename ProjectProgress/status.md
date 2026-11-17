@@ -4,9 +4,9 @@
 > Update it at the END of every phase (and whenever a blocker or decision appears).
 > History of what changed lives in `changelog.md`; the plan lives in `ContextFiles/03-build-plan.md`.
 
-**Last updated:** 2026-11-16
+**Last updated:** 2026-11-17
 **Current phase:** Phase 7 — Hardening, deploy to Cloudflare, QA (NOT STARTED)
-**Next action:** Verify Phase 6 on a real phone (see the changelog's "How to verify"), choose the Cloudflare deploy method, then start a new session, enter plan mode and plan Phase 7.
+**Next action:** Verify Phase 6 on a real phone (see the changelog's "How to verify"), then start a new session, enter plan mode and plan Phase 7.
 
 ---
 
@@ -29,9 +29,18 @@ Status values: `[ ]` not started · `[~]` in progress · `[x]` done and committe
 
 - [x] Create the Realtime Database in the Firebase console (locked mode) — done by user 2026-11-16. Default instance `https://impastababy-67140-default-rtdb.firebaseio.com`, newly created and empty (root is `null`), so no other app uses it yet. Phase 2 read the locked defaults and then deployed this game's rules (only `/whomst` is open).
 - [x] Enable **Anonymous** sign-in under Authentication — needed before Phase 2 (done by user 2026-11-15)
-- [ ] Choose the Cloudflare deploy method (wrangler CLI vs GitHub auto-deploy) — needed before Phase 7
+- [x] Choose the Cloudflare deploy method — **GitHub auto-deploy** (user, 2026-11-17). See "Deploy target" below.
+- [x] Sign in to Cloudflare and let it deploy from the user's GitHub repos — done by user 2026-11-17 (signed in in their Chrome, Cloudflare's GitHub access granted).
+- [ ] Connect the repo in the Cloudflare dashboard (build settings below) — Phase 7
+- [ ] Set `VITE_FIREBASE_*` as build variables in the Cloudflare dashboard (same values as `.env.local`) — Phase 7
 - [ ] Add the deployed Cloudflare domain to Firebase Authorized domains — Phase 7
-- [ ] If building on Cloudflare from GitHub: set `VITE_FIREBASE_*` as build variables in the Cloudflare dashboard — Phase 7
+
+### Deploy target (for Phase 7)
+- **Repo:** GitHub `Ernesto-Trevino-E/WhomstTheMostLikelyBABY` (the `origin` remote), production branch `main`. Every push to `main` will redeploy once connected.
+- **Build:** `npm run build`, output directory `dist`. Needs the `VITE_FIREBASE_*` variables at build time (they are baked into the bundle; `.env.local` is gitignored, so Cloudflare must have them).
+- **Routing:** the app uses hash routes (`#/ABCD`), so every page load hits `/`; still add the single-page-app fallback the build plan asks for.
+- **Not decided yet (Phase 7 plan):** Cloudflare Workers static assets vs Pages, and the project/subdomain name.
+- The user is signed in to Cloudflare in their own Chrome (Claude in Chrome), not in the in-app browser. Dashboard clicks that create or change a Cloudflare project need the user's OK first.
 
 ---
 
